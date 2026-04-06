@@ -93,7 +93,7 @@ Fichier complet : {session_dir}/02-codex-review-spec.md
 Que veux-tu faire ?
 
 A. Integrer tous les findings et continuer
-   → Claude corrige la spec, ecrit 03-spec-v2.md
+   → SuperPowers corrige la spec, ecrit 03-spec-v2.md
 
 B. Integrer certains findings (tu precises lesquels)
 
@@ -110,7 +110,7 @@ Ou tape ce que tu veux — commentaire libre.
 
 Log the user's choice in `session.log`.
 
-After A or B: Claude corrects the spec → `{session_dir}/03-spec-v2.md`.
+After A or B: SuperPowers corrects the spec → `{session_dir}/03-spec-v2.md`.
 Do NOT automatically re-submit to Codex. User controls re-review via D.
 
 ---
@@ -151,7 +151,7 @@ Log: `[timestamp] Phase 3 complete: 04-plan.md`
 ### Decision Point #2
 
 Same A-E format as Decision Point #1.
-If corrections: Claude writes `{session_dir}/06-plan-v2.md`.
+If corrections: SuperPowers rewrites → `{session_dir}/06-plan-v2.md`.
 
 ---
 
@@ -197,7 +197,7 @@ Codex a review l'implementation. Voici ses findings :
 
 [Summary of findings]
 
-A. Claude corrige tous les findings → nouveau commit
+A. Integrer tous les findings → SuperPowers corrige, nouveau commit
 
 B. Corriger certains findings (tu precises)
 
