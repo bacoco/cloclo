@@ -28,9 +28,10 @@ Aussi : relire les derniers messages de la conversation.
 | 5 | Travail actif sur {{DOMAIN_1}} | **{{DEV_1}}** |
 | 6 | Travail actif sur {{DOMAIN_2}} | **{{DEV_2}}** |
 | 7 | "review", "relis" | **REVIEWER** |
-| 8 | "met a jour la doc", "update sources" | **DOC-SYNC** |
-| 9 | Debut de session, rien de specifique | **HEALTH-CHECK** |
-| 10 | Rien ne matche | **CONSEILLER** |
+| 8 | "wiki", "historique", "decision", "pourquoi on a" | **WIKI-QUERY** |
+| 9 | "met a jour la doc", "update sources" | **DOC-SYNC** |
+| 10 | Debut de session, rien de specifique | **HEALTH-CHECK** |
+| 11 | Rien ne matche | **CONSEILLER** |
 
 ## Phase 3 — Dispatch
 

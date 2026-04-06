@@ -1,0 +1,21 @@
+[
+  {
+    "event": "SessionStart",
+    "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
+    "description": "CLoClo — inject wiki state + visual verification rules (no workflow duplication with SuperPowers)"
+  },
+  {
+    "event": "PostToolUse",
+    "matcher": "Bash",
+    "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-commit.sh",
+    "timeout": 5000,
+    "description": "CLoClo — nudge wiki update after git commits"
+  },
+  {
+    "event": "PostToolUse",
+    "matcher": "Edit|Write",
+    "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-ui-edit.sh",
+    "timeout": 3000,
+    "description": "CLoClo — remind agent-browser verification after UI file edits"
+  }
+]

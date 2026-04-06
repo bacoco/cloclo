@@ -1,10 +1,12 @@
 # CLoClo — Code Loop Orchestrator: Claude + Codex
 
-A Claude Code plugin with two superpowers:
+A Claude Code plugin with three superpowers:
 
-1. **`/pipeline`** — Inserts independent [Codex](https://github.com/openai/codex-plugin-cc) reviews into the [SuperPowers](https://github.com/obra/superpowers) workflow. Design, review, plan, review, execute, review, verify.
+1. **`/pipeline`** — Inserts independent [Codex](https://github.com/openai/codex-plugin-cc) reviews into the [SuperPowers](https://github.com/obra/superpowers) workflow. Design, review, plan, review, execute, review, verify — and auto-feed everything into the wiki.
 
-2. **`/bootstrap`** — Sets up Claude Code infrastructure on any new project. CLAUDE.md, hooks, memory, skills, behavioral patterns — all adapted to your actual stack.
+2. **`/bootstrap`** — Sets up Claude Code infrastructure on any new project. CLAUDE.md, hooks, memory, skills, wiki, behavioral patterns — all adapted to your actual stack.
+
+3. **`/wiki`** — LLM-maintained persistent knowledge base. Ingest sources, query knowledge, lint for quality. Based on [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f). The wiki grows transparently as you work.
 
 ## Installation
 
@@ -60,6 +62,12 @@ Codex does a real code review: git diff, full file reads, type checks, bug hunti
 **Phase 7 — SuperPowers verifies.**
 Full verification-before-completion: no claims without evidence, commands executed, output shown.
 
+**Phase 7.5 — Visual verification (if UI modified).**
+If the implementation touched UI files and agent-browser is installed, it opens each affected page, takes screenshots, and verifies the UI matches the spec. Screenshots are saved as evidence. If agent-browser is not available, visual verification is skipped with a warning.
+
+**Phase 8 — Wiki auto-ingest.**
+If a project wiki exists, CLoClo automatically distills the session — decisions, trade-offs, Codex findings, architecture choices — into wiki pages. This is silent and transparent. Your project knowledge compounds with every pipeline run.
+
 ### Summary
 
 ```
@@ -70,6 +78,8 @@ SuperPowers writes plan ──► plan
 SuperPowers executes    ──► code
                               ↓ Codex reviews ↓ you react ↓ SuperPowers fixes
 SuperPowers verifies    ──► done
+                              ↓ agent-browser visual check (if UI)
+                              ↓ wiki auto-ingest (silent)
 ```
 
 ### Without Codex
@@ -93,6 +103,65 @@ All artifacts are tracked in `docs/cloclo-sessions/YYYY-MM-DD-<slug>/`:
 
 ---
 
+## /wiki — LLM Knowledge Base
+
+A persistent wiki that grows as you work. Claude does the bookkeeping — summaries, cross-references, contradictions, index maintenance. You curate sources and ask questions.
+
+Based on [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+
+### How It Works
+
+```
+wiki/
+  schema.md     ← conventions (like CLAUDE.md, but for the wiki)
+  index.md      ← master catalog — Claude reads this FIRST
+  log.md        ← append-only operation history
+  sources/      ← your raw documents (immutable)
+  pages/        ← Claude-maintained wiki pages
+    entities/     people, tools, organizations
+    concepts/     ideas, patterns, principles
+    topics/       broader themes
+    comparisons/  X vs Y analysis
+    syntheses/    cross-cutting analysis
+    sources/      per-source summaries
+```
+
+### Three Layers
+
+1. **Raw sources** (`sources/`) — Articles, papers, docs you drop in. Claude reads, never modifies.
+2. **Wiki pages** (`pages/`) — Claude owns entirely. Summaries, entity pages, cross-references.
+3. **Schema** (`schema.md`) — Tells Claude how the wiki is structured.
+
+### Commands
+
+| Command | What |
+|---------|------|
+| `/wiki init` | Set up wiki scaffold (one question: what domain?) |
+| `/wiki ingest <path>` | Read source, extract knowledge, update 5-15 wiki pages |
+| `/wiki query <question>` | Answer from wiki with citations |
+| `/wiki lint` | Health-check: orphans, broken links, stubs, contradictions |
+| `/wiki status` | Quick stats and recent activity |
+
+### Transparent Integration
+
+**You rarely need to call `/wiki` manually.** The wiki grows automatically:
+
+- **`/pipeline`** auto-ingests session artifacts (specs, plans, reviews, decisions) into the wiki after Phase 7.
+- **`/bootstrap`** creates the wiki scaffold as part of project setup.
+- **`/wiki query`** is there when you need to ask the wiki a question.
+- **`/wiki lint`** is there for periodic health checks.
+
+The knowledge compounds silently. After 10 pipeline runs, you have a rich project wiki documenting every design decision, every Codex finding, every architecture choice — without ever having manually organized anything.
+
+### Key Insight
+
+> "The tedious part of maintaining a knowledge base is not the reading...it's the bookkeeping."
+> — Karpathy
+
+LLMs handle the bookkeeping cost-free. You focus on building; the wiki maintains itself.
+
+---
+
 ## /bootstrap — Project Setup
 
 Sets up Claude Code infrastructure on any project in one command:
@@ -111,6 +180,7 @@ Sets up Claude Code infrastructure on any project in one command:
 | 4 | Memory | `MEMORY.md` — initialized index |
 | 4.5 | Behavioral patterns | 7 feedback memories (verified Tier 1-2 patterns) |
 | 5 | Skills | orchestrateur, smoke-test, deploy-verify, debug, review, audit, task, opensrc-sync |
+| 5.5 | Wiki | `wiki/` — persistent knowledge base scaffold |
 | 6 | opensrc | Source code of key dependencies for AI context |
 | 7 | Verification | All skills tested |
 | 8 | Commit | Everything committed |
@@ -141,6 +211,48 @@ The bootstrap installs hooks adapted to your stack:
 
 ---
 
+## How Everything Connects
+
+```
+/bootstrap
+  └─► Sets up: CLAUDE.md + hooks + memory + skills + wiki + opensrc
+        ↓
+/pipeline <task>  (or just describe the task — CLoClo detects intent)
+  ├─► SuperPowers brainstorms ──► spec
+  │     ↓ Codex reviews ↓ you react ↓ rewrite
+  ├─► SuperPowers plans ──► plan
+  │     ↓ Codex reviews ↓ you react ↓ rewrite
+  ├─► SuperPowers executes ──► code
+  │     ↓ Codex reviews ↓ you react ↓ fix
+  ├─► SuperPowers verifies ──► done
+  ├─► agent-browser visual check (if UI modified)
+  └─► Wiki auto-ingest ──► knowledge compounds
+        ↓
+/wiki query "why did we choose X?"
+  └─► Answer from accumulated project knowledge, with citations
+```
+
+The loop is: **build → review → verify → see → learn → build better next time.**
+
+### Coexistence with SuperPowers
+
+CLoClo is designed to **complement** SuperPowers, not compete with it:
+
+| Concern | SuperPowers handles | CLoClo adds |
+|---------|-------------------|-------------|
+| **Workflow** | Brainstorming, planning, execution, verification | Codex reviews between phases |
+| **Knowledge** | Session memory (conversation context) | Persistent wiki (cross-referenced, queryable) |
+| **Visual testing** | — | agent-browser verification after UI changes |
+| **Hooks** | SessionStart: skill invocation rules | SessionStart: wiki state + visual verification rules |
+
+Both plugins' SessionStart hooks run and concatenate. They inject different, complementary context:
+- SuperPowers: "check for skills before acting"
+- CLoClo: "here's the wiki state, update it after changes, verify UI with agent-browser"
+
+No conflict because CLoClo never injects workflow rules (brainstorming, planning steps) — that's SuperPowers' territory.
+
+---
+
 ## Behavioral Patterns Guide
 
 See [`docs/behavioral-patterns.md`](docs/behavioral-patterns.md) for a detailed guide on which AI coding patterns actually work, based on experience and research.
@@ -152,14 +264,20 @@ Key insight: **Mechanical enforcement (hooks) > Written rules (CLAUDE.md) > Pass
 ## Usage Examples
 
 ```
-# Set up a new project
+# Set up a new project (includes wiki)
 /bootstrap
 
-# Build a feature with Codex reviews
+# Build a feature with Codex reviews (auto-feeds wiki)
 /pipeline Add a search filter to the user dashboard
 
-# Build a feature without Codex
-/pipeline Refactor the auth middleware to support JWT rotation
+# Query accumulated project knowledge
+/wiki query "what authentication approach did we choose and why?"
+
+# Manually ingest an external article
+/wiki ingest docs/research/oauth2-best-practices.md
+
+# Health-check the wiki
+/wiki lint
 ```
 
 ## License

@@ -153,6 +153,44 @@ Pour chaque skill :
 
 ---
 
+## PHASE 5.5 — Project Wiki
+
+Set up the LLM Wiki — a persistent, compounding knowledge base maintained by Claude.
+The wiki grows automatically during `/pipeline` sessions and can be queried with `/wiki query`.
+
+1. Ask ONE question:
+   > "What domain is this project in? (e.g., 'SaaS platform', 'ML pipeline', 'mobile app')"
+   > Or press Enter to use the project description from CLAUDE.md.
+
+2. Read wiki templates from:
+   `Read .claude/skills/wiki/templates/`
+
+3. Create the wiki scaffold:
+   ```
+   wiki/
+     schema.md          ← adapted from schema-template.md (domain from user answer)
+     index.md           ← from index-template.md
+     log.md             ← from log-template.md
+     sources/.gitkeep
+     pages/entities/.gitkeep
+     pages/concepts/.gitkeep
+     pages/topics/.gitkeep
+     pages/comparisons/.gitkeep
+     pages/syntheses/.gitkeep
+     pages/sources/.gitkeep
+   ```
+
+4. Add `wiki/` entry to `.gitignore` or not — ask user:
+   > "Track the wiki in git? (yes = version history, shared with team / no = local only)"
+
+5. Update the orchestrateur skill routing table to include wiki operations.
+
+6. Append init entry to `wiki/log.md`.
+
+**Regle :** Le wiki est vide au debut. Il se remplit automatiquement via `/pipeline` et manuellement via `/wiki ingest`.
+
+---
+
 ## PHASE 6 — opensrc-sync
 
 Si le projet a des dependances npm/pypi/github importantes :
@@ -206,13 +244,14 @@ Invoke Skill("orchestrateur")
 ## PHASE 8 — Commit
 
 ```bash
-git add .claude/ CLAUDE.md
-git commit -m "feat: claude code infrastructure — skills, hooks, memory, opensrc
+git add .claude/ CLAUDE.md wiki/
+git commit -m "feat: claude code infrastructure — skills, hooks, memory, wiki, opensrc
 
 - CLAUDE.md adapte au projet
 - Hooks PostToolUse type-check + PreToolUse commit-blocker
 - 7 feedback memories comportementales
 - [N] skills (orchestrateur, smoke-test, deploy, ...)
+- wiki scaffold initialized (domain: [domain])
 - opensrc: [N] packages source trackes"
 ```
 

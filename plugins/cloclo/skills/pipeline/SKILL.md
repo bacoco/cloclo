@@ -270,6 +270,62 @@ Log: `[timestamp] Phase 7 complete: {PASSED|FAILED}`
 
 ---
 
+## Phase 7.5: Visual Verification (If UI Modified)
+
+**This phase runs only if the implementation touched UI files** (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`, `.css`).
+If no UI files were modified, skip to Phase 8.
+
+### Prerequisite: Check agent-browser
+
+```bash
+command -v agent-browser >/dev/null 2>&1
+```
+
+**If agent-browser is NOT found:**
+- **WARNING:** "agent-browser is not installed. Visual verification skipped. Install it for UI verification: https://github.com/vrsalis/agent-browser"
+- Log: `[timestamp] Phase 7.5 SKIPPED: agent-browser not available`
+- Continue to Phase 8. Do NOT block the pipeline.
+
+**If agent-browser IS available:**
+
+### Steps
+
+1. Detect if any commits from Phase 5 modified UI files:
+   ```bash
+   git diff --name-only {base_ref}..HEAD | grep -E '\.(tsx|jsx|vue|svelte|html|css|scss)$'
+   ```
+
+2. If UI files found, identify the affected pages/routes.
+
+3. For each affected page:
+   ```bash
+   agent-browser open <url>          # Open the page
+   agent-browser snapshot            # Get interactive elements
+   agent-browser screenshot <path>   # Capture visual state
+   ```
+
+4. **Read and verify EVERY screenshot immediately.** Do not skip this.
+   - Does the UI match the spec from Phase 1?
+   - Are there visual regressions? Broken layouts? Missing elements?
+   - Do interactive elements work? Click buttons, fill forms, verify modals.
+
+5. Save verification screenshots to `{session_dir}/screenshots/` for evidence.
+
+6. If issues found:
+   - Fix the code.
+   - Re-run agent-browser to verify the fix.
+   - New commit with fix.
+
+**Rules:**
+- **agent-browser is the preferred visual testing tool.** If available, use it exclusively.
+- **Screenshots are evidence.** They go in the session directory and optionally in the wiki.
+- **Every screenshot must be READ and verified.** An unread screenshot is not a verification.
+- Use the project's actual port (typically from docker/dev server), never assume.
+
+Log: `[timestamp] Phase 7.5 complete: {N pages verified, M screenshots}`
+
+---
+
 ## Session File Structure
 
 ```
@@ -281,6 +337,9 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 ├── 05-codex-review-plan.md     ← From codex-review skill
 ├── 06-plan-v2.md               ← If corrections after review
 ├── 07-codex-review-impl.md     ← From codex-review skill
+├── screenshots/                ← Visual verification evidence (Phase 7.5)
+│   ├── page-name-01.png
+│   └── page-name-02.png
 ├── session.log                 ← All decisions + timestamps + job-ids
 └── pipeline.config.md          ← Optional verification config
 ```
@@ -309,6 +368,57 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 [2026-04-06T16:10:00] Phase 7: VERIFICATION_PASSED
 ```
 
+## Phase 8: Wiki Ingest (Automatic)
+
+**This phase runs automatically if a project wiki exists (`wiki/schema.md`).**
+If no wiki exists, skip silently. The user can set one up later with `/wiki init`.
+
+### What gets ingested
+
+The pipeline session is a rich knowledge source — decisions, trade-offs, reviews, patterns.
+Auto-ingest the session as a single source:
+
+1. Check if `wiki/schema.md` exists. If not → skip Phase 8 entirely.
+2. Read `wiki/schema.md` and `wiki/index.md` for context.
+3. Create a **combined session source** at `wiki/sources/YYYY-MM-DD-pipeline-<slug>.md`:
+   ```markdown
+   # Pipeline Session: <slug>
+
+   ## Spec Summary
+   [Key decisions and trade-offs from 01-spec.md or 03-spec-v2.md]
+
+   ## Codex Findings
+   [Important findings from reviews — bugs caught, patterns flagged]
+
+   ## Implementation Decisions
+   [Architecture choices, rejected alternatives, lessons learned]
+
+   ## Verification
+   [What was tested, what passed, what needed fixing]
+   ```
+4. Create a **source summary page** at `wiki/pages/sources/YYYY-MM-DD-pipeline-<slug>.md`.
+5. Update/create entity and concept pages for:
+   - New components, services, or modules created
+   - Patterns established or changed
+   - Bugs found and how they were fixed
+   - Architecture decisions and their rationale
+6. Update `wiki/index.md` with new/modified pages.
+7. Append to `wiki/log.md`:
+   ```
+   ## [YYYY-MM-DD HH:MM] INGEST | Pipeline session: <slug>
+   - Source: sources/YYYY-MM-DD-pipeline-<slug>.md
+   - Pages created: <list>
+   - Pages updated: <list>
+   ```
+8. Report:
+   ```
+   Wiki updated: +N pages from pipeline session
+   ```
+
+Log: `[timestamp] Phase 8 complete: wiki updated (N pages)`
+
+---
+
 ## Important Rules
 
 1. **Do NOT reimplement SuperPowers or Codex skills.** Invoke them. They are the real thing.
@@ -318,3 +428,4 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 5. **Each phase outputs to session dir** with numbered filenames for traceability.
 6. **Session can be resumed.** Check session.log for last completed phase and continue from there.
 7. **SuperPowers specs and plans** are saved to their own directories (`docs/superpowers/specs/`, `docs/superpowers/plans/`). CLoClo copies or symlinks them into the session dir for session tracking.
+8. **Wiki ingest is automatic and silent.** If no wiki exists, Phase 8 is skipped without mention. The wiki grows transparently as the user works.
