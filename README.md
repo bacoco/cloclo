@@ -1,14 +1,26 @@
 # CLoClo — Code Loop Orchestrator: Claude + Codex
 
-A Claude Code plugin that inserts [Codex](https://github.com/openai/codex-plugin-cc) reviews into the [SuperPowers](https://github.com/obra/superpowers) workflow.
+A Claude Code plugin with two superpowers:
 
-SuperPowers already does everything well: interactive brainstorming with a visual companion server, one-question-at-a-time UX exploration, spec writing, implementation plans with TDD, subagent execution, verification. CLoClo does not touch any of that.
+1. **`/pipeline`** — Inserts independent [Codex](https://github.com/openai/codex-plugin-cc) reviews into the [SuperPowers](https://github.com/obra/superpowers) workflow. Design, review, plan, review, execute, review, verify.
 
-What CLoClo adds: after each SuperPowers phase produces an artifact (spec, plan, or code), Codex independently reviews it against your real codebase. The findings come back, you react naturally, and SuperPowers takes over again to integrate and continue.
+2. **`/bootstrap`** — Sets up Claude Code infrastructure on any new project. CLAUDE.md, hooks, memory, skills, behavioral patterns — all adapted to your actual stack.
 
-## How It Works
+## Installation
 
-### Example session
+Tell Claude Code:
+
+```
+Install the CLoClo plugin from marketplace bacoco/cloclo on GitHub
+```
+
+Claude adds the marketplace and plugin to your `settings.json` automatically. Restart when prompted.
+
+---
+
+## /pipeline — Development Workflow
+
+### How It Works
 
 You open Claude Code in your project and type:
 
@@ -60,38 +72,11 @@ SuperPowers executes    ──► code
 SuperPowers verifies    ──► done
 ```
 
-## Installation
-
-Tell Claude Code:
-
-```
-Install the CLoClo plugin from marketplace bacoco/cloclo on GitHub
-```
-
-Claude will add the marketplace and plugin to your `settings.json` automatically. Restart Claude Code when prompted.
-
-On first `/pipeline` run, CLoClo checks for SuperPowers and Codex. If either is missing, it installs them automatically — adds the marketplace entries, installs the Codex CLI via npm, and prompts you to log in. No manual configuration needed.
-
-## Usage
-
-```
-/pipeline <describe what you want to build>
-```
-
-Examples:
-```
-/pipeline Add a search filter to the user dashboard
-/pipeline Refactor the auth middleware to support JWT rotation
-/pipeline Build a CSV export feature for the reports page
-```
-
-You can also just describe what you want without `/pipeline` — CLoClo triggers automatically when it detects creative or implementation work.
-
 ### Without Codex
 
 If Codex is not installed or not authenticated, CLoClo skips the review phases. You get pure SuperPowers — still excellent, just without the independent Codex reviews between phases.
 
-## Session Files
+### Session Files
 
 All artifacts are tracked in `docs/cloclo-sessions/YYYY-MM-DD-<slug>/`:
 
@@ -106,7 +91,76 @@ All artifacts are tracked in `docs/cloclo-sessions/YYYY-MM-DD-<slug>/`:
 | `07-codex-review-impl.md` | Codex | Code review findings |
 | `session.log` | CLoClo | Decisions, timestamps, job IDs |
 
-Sessions are designed to be committed to git for traceability.
+---
+
+## /bootstrap — Project Setup
+
+Sets up Claude Code infrastructure on any project in one command:
+
+```
+/bootstrap
+```
+
+### What it creates
+
+| Phase | What | Files |
+|-------|------|-------|
+| 1 | Project analysis | (mental model) |
+| 2 | CLAUDE.md | `CLAUDE.md` — 6 mandatory rules, architecture, patterns |
+| 3 | Hooks | `.claude/settings.json` — type-check + commit-blocker |
+| 4 | Memory | `MEMORY.md` — initialized index |
+| 4.5 | Behavioral patterns | 7 feedback memories (verified Tier 1-2 patterns) |
+| 5 | Skills | orchestrateur, smoke-test, deploy-verify, debug, review, audit, task, opensrc-sync |
+| 6 | opensrc | Source code of key dependencies for AI context |
+| 7 | Verification | All skills tested |
+| 8 | Commit | Everything committed |
+
+### The 7 seeded behavioral patterns
+
+These are generic feedback memories validated by real-world experience. They work on any project:
+
+| Pattern | Tier | What it does |
+|---------|------|-------------|
+| `verify_before_writing` | 1 | Grep/Glob BEFORE creating anything |
+| `test_after_change` | 1 | Run tests AFTER every modification |
+| `diagnostic_sequence` | 1 | Read the FULL error when something breaks |
+| `execute_not_plan` | 2 | Do the thing, don't plan the thing |
+| `never_remove_features` | 2 | Change HOW, not WHAT |
+| `no_speculation` | 2 | Facts or "I don't know yet" |
+| `commit_checkpoints` | 2 | Commit every 3-5 tested changes |
+
+### Hook templates
+
+The bootstrap installs hooks adapted to your stack:
+
+| Hook Type | What | Available for |
+|-----------|------|---------------|
+| PostToolUse type-check | Auto type-check after every edit | TS, Python, Go, Rust |
+| PreToolUse commit-blocker | Block commits with anti-patterns | TS (console.log), Python (except:pass) |
+| PostToolUse test-runner | Run tests after edit (optional) | pytest, next build |
+
+---
+
+## Behavioral Patterns Guide
+
+See [`docs/behavioral-patterns.md`](docs/behavioral-patterns.md) for a detailed guide on which AI coding patterns actually work, based on experience and research.
+
+Key insight: **Mechanical enforcement (hooks) > Written rules (CLAUDE.md) > Passive memory**. A hook that blocks a commit is 10x more effective than a rule that says "don't do this."
+
+---
+
+## Usage Examples
+
+```
+# Set up a new project
+/bootstrap
+
+# Build a feature with Codex reviews
+/pipeline Add a search filter to the user dashboard
+
+# Build a feature without Codex
+/pipeline Refactor the auth middleware to support JWT rotation
+```
 
 ## License
 

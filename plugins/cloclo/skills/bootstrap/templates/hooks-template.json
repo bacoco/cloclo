@@ -1,0 +1,68 @@
+{
+  "_comment": "Templates de hooks Claude Code par stack. Le skill bootstrap selectionne et adapte les hooks selon le projet.",
+
+  "postToolUse": {
+    "typescript": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.tsx?$'; then cd {{PROJECT_ROOT}} && npx tsc --noEmit 2>&1 | head -30; fi",
+      "timeout": 30000,
+      "description": "Type-check TypeScript after edit"
+    },
+    "python": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.py$'; then python3 -c \"import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)\" \"$CLAUDE_FILE_PATHS\" 2>&1 | head -10; fi",
+      "timeout": 10000,
+      "description": "Syntax-check Python after edit"
+    },
+    "go": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.go$'; then cd {{PROJECT_ROOT}} && go vet ./... 2>&1 | head -20; fi",
+      "timeout": 30000,
+      "description": "Vet Go code after edit"
+    },
+    "rust": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.rs$'; then cd {{PROJECT_ROOT}} && cargo check 2>&1 | head -30; fi",
+      "timeout": 60000,
+      "description": "Check Rust after edit"
+    }
+  },
+
+  "preToolUse": {
+    "typescript_commit_blocker": {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "if echo \"$CLAUDE_COMMAND\" | grep -qE '^git commit'; then cd {{PROJECT_ROOT}} && ! grep -rn 'console\\.log' --include='*.ts' --include='*.tsx' src/ 2>/dev/null | grep -v '// keep' | head -5 || (echo 'BLOCKED: console.log found in source files. Remove them before committing.' && exit 1); fi",
+      "timeout": 10000,
+      "description": "Block commits with console.log in TS source"
+    },
+    "python_commit_blocker": {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "if echo \"$CLAUDE_COMMAND\" | grep -qE '^git commit'; then cd {{PROJECT_ROOT}} && ! grep -rn 'except:$\\|except: pass' --include='*.py' {{SRC_DIR}}/ 2>/dev/null | head -5 || (echo 'BLOCKED: bare except or except:pass found. Add proper error handling.' && exit 1); fi",
+      "timeout": 10000,
+      "description": "Block commits with bare except in Python source"
+    }
+  },
+
+  "postToolUse_test_runners": {
+    "python_pytest": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.py$'; then cd {{PROJECT_ROOT}} && python3 -m pytest tests/ -x --tb=short -q 2>&1 | tail -15; fi",
+      "timeout": 60000,
+      "description": "Run pytest after Python edit (optional, heavier)"
+    },
+    "typescript_build": {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write",
+      "command": "if echo \"$CLAUDE_FILE_PATHS\" | grep -qE '\\.tsx?$'; then cd {{PROJECT_ROOT}} && npx next build 2>&1 | tail -20; fi",
+      "timeout": 120000,
+      "description": "Build check after TS edit (optional, heavier)"
+    }
+  }
+}

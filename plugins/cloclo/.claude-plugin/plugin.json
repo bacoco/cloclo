@@ -1,7 +1,7 @@
 {
   "name": "cloclo",
-  "version": "0.1.0",
-  "description": "CLoClo — Code Loop Orchestrator: Claude + Codex. Inserts Codex reviews into the SuperPowers workflow.",
+  "version": "0.2.0",
+  "description": "CLoClo — Dev pipeline (Claude+Codex reviews) + project bootstrap (CLAUDE.md, hooks, memory, skills) + behavioral patterns.",
   "author": {
     "name": "Loic Baconnier"
   },

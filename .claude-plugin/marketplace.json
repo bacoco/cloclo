@@ -4,14 +4,14 @@
     "name": "Loic Baconnier"
   },
   "metadata": {
-    "description": "CLoClo — Code Loop Orchestrator: Claude + Codex. A dev pipeline plugin for Claude Code.",
-    "version": "0.1.0"
+    "description": "CLoClo — Code Loop Orchestrator: Claude + Codex. Dev pipeline + project bootstrap + behavioral patterns for Claude Code.",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "cloclo",
-      "description": "Orchestrate Claude and Codex as two developers collaborating via files: design, spec, review, plan, execute, verify.",
-      "version": "0.1.0",
+      "description": "Dev pipeline (Claude+Codex reviews) + project bootstrap (CLAUDE.md, hooks, memory, skills) + behavioral patterns.",
+      "version": "0.2.0",
       "author": {
         "name": "Loic Baconnier"
       },
