@@ -62,19 +62,31 @@ SuperPowers verifies    ──► done
 
 ## Installation
 
-### One command
+Add these two entries to your `~/.claude/settings.json` and restart Claude Code:
 
-```bash
-git clone https://github.com/bacoco/cloco.git ~/.claude/plugins/marketplaces/cloco
+```json
+{
+  "enabledPlugins": {
+    "cloco@cloco": true
+  },
+  "extraKnownMarketplaces": {
+    "cloco": {
+      "source": {
+        "source": "github",
+        "repo": "bacoco/cloco"
+      }
+    }
+  }
+}
 ```
 
-Then restart Claude Code. On first run, `/pipeline` checks for SuperPowers and Codex. If either is missing, it installs them automatically:
+That's it. Claude Code downloads CLOco from GitHub automatically.
 
-- **SuperPowers missing:** CLOco adds it to your `settings.json` and tells you to restart Claude Code.
+On first run, `/pipeline` checks for SuperPowers and Codex. If either is missing, it installs them for you:
+
+- **SuperPowers missing:** CLOco adds it to your `settings.json` and tells you to restart.
 - **Codex CLI missing:** CLOco runs `npm install -g @openai/codex` and prompts `codex login`.
 - **Codex plugin missing:** CLOco adds it to your `settings.json` and tells you to restart.
-
-You can also install prerequisites manually — see [Manual Setup](#manual-setup).
 
 ## Usage
 
@@ -111,49 +123,6 @@ All artifacts are tracked in `docs/cloco-sessions/YYYY-MM-DD-<slug>/`:
 | `session.log` | CLOco | Decisions, timestamps, job IDs |
 
 Sessions are designed to be committed to git for traceability.
-
-## Manual Setup
-
-If you prefer to install prerequisites manually:
-
-### SuperPowers
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "enabledPlugins": {
-    "superpowers@superpowers-marketplace": true
-  },
-  "extraKnownMarketplaces": {
-    "superpowers-marketplace": {
-      "source": { "source": "github", "repo": "obra/superpowers-marketplace" }
-    }
-  }
-}
-```
-
-### Codex
-
-```bash
-npm install -g @openai/codex
-codex login
-```
-
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "enabledPlugins": {
-    "codex@openai-codex": true
-  },
-  "extraKnownMarketplaces": {
-    "openai-codex": {
-      "source": { "source": "github", "repo": "openai/codex-plugin-cc" }
-    }
-  }
-}
-```
 
 ## License
 
