@@ -1,0 +1,21 @@
+{
+  "name": "cloco",
+  "owner": {
+    "name": "Loic Baconnier"
+  },
+  "metadata": {
+    "description": "Claude + Codex Collaboration — a dev pipeline plugin for Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "cloco",
+      "description": "Orchestrate Claude and Codex as two developers collaborating via files: design, spec, review, plan, execute, verify.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Loic Baconnier"
+      },
+      "source": "./plugins/cloco"
+    }
+  ]
+}

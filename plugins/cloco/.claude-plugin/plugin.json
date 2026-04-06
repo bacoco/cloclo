@@ -1,0 +1,9 @@
+{
+  "name": "cloco",
+  "version": "0.1.0",
+  "description": "CLOco — Claude + Codex Collaboration. A dev pipeline plugin that orchestrates Claude and Codex as two developers collaborating via files.",
+  "author": {
+    "name": "Loic Baconnier"
+  },
+  "license": "MIT"
+}
