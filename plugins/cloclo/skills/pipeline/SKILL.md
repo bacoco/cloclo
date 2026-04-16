@@ -424,6 +424,114 @@ Log: `[timestamp] Phase 8 complete: wiki updated (N pages)`
 
 ---
 
+## Maturity Levels
+
+A single `maturity` field controls how strictly the pipeline runs. Set in `pipeline.config.md` or auto-detected from project state.
+
+| Level | When | Gate strictness | Parallelism | Review depth |
+|-------|------|-----------------|-------------|-------------|
+| `spike` | Exploring, prototyping | Soft gates (user can skip freely) | 1 agent | Codex review optional |
+| `dev` | Active development (default) | Standard gates (A-E decisions) | Up to 3 agents | Codex reviews all phases |
+| `ship` | Pre-release, production | Hard gates (no skip without documented reason) | Up to 5 agents | Codex + adversarial triple-perspective |
+
+**Auto-detection:** If no maturity is set, detect from context:
+- No tests, no CI → `spike`
+- Tests exist, active branch → `dev`
+- CI passing, release branch or tag → `ship`
+
+The maturity level is logged in session.log and passed to all skill invocations. SuperPowers skills adapt their depth accordingly (e.g., brainstorming in spike mode asks fewer questions).
+
+---
+
+## Bounded Retry Loops
+
+Every phase that can fail has a hard retry ceiling. Prevents infinite loops and runaway token spend.
+
+| Phase | Max retries | On exhaustion |
+|-------|-------------|---------------|
+| Phase 2 (Codex review spec) | 2 | Skip review, warn user |
+| Phase 4 (Codex review plan) | 2 | Skip review, warn user |
+| Phase 5 (Subagent execution) | 3 per task | Mark task BLOCKED, continue others |
+| Phase 6 (Codex review impl) | 2 | Skip review, warn user |
+| Phase 7 (Verification) | 3 | FAIL pipeline, require user intervention |
+| Phase 7.5 (Visual verification) | 2 per page | Log failure, continue to next page |
+
+When a retry triggers:
+1. Log: `[timestamp] Phase {N} retry {attempt}/{max}: {reason}`
+2. If exhausted: `[timestamp] Phase {N} EXHAUSTED after {max} retries — {action taken}`
+3. Never retry silently — always print what failed and what happens next.
+
+---
+
+## Resume / Checkpoint
+
+The pipeline writes `{session_dir}/checkpoint.json` after each phase completion:
+
+```json
+{
+  "session": "2026-04-16-auth-refactor",
+  "maturity": "dev",
+  "last_completed_phase": 4,
+  "last_completed_at": "2026-04-16T15:22:00Z",
+  "artifacts": {
+    "spec": "03-spec-v2.md",
+    "plan": "04-plan.md",
+    "base_ref": "a1b2c3d",
+    "commits": []
+  },
+  "decisions": {
+    "1": {"choice": "A", "at": "2026-04-16T14:55:30Z"},
+    "2": {"choice": "B", "details": "integrate 1,3 only", "at": "2026-04-16T15:22:30Z"}
+  },
+  "retries": {"phase_2": 0, "phase_4": 0}
+}
+```
+
+**On pipeline start:** If `checkpoint.json` exists in the session dir:
+1. Read it and show: `Resuming session "{slug}" from Phase {N+1}. Last completed: Phase {N} at {time}.`
+2. Ask: `Reprendre a partir de Phase {N+1} ? (oui/non/restart)`
+3. If `oui`: skip to Phase N+1 with all artifacts from checkpoint.
+4. If `restart`: delete checkpoint, start from Phase 1.
+5. If `non`: ask what to do.
+
+**Checkpoint writes:** After EACH phase completes successfully, update checkpoint.json. This means a crash mid-Phase 5 loses only that phase's work, not the entire session.
+
+---
+
+## Auto-Written Session Handoff
+
+At the end of every pipeline run (success or failure), automatically write `{session_dir}/handoff.md`:
+
+```markdown
+# Session Handoff: {slug}
+
+## Status: {COMPLETED | FAILED_AT_PHASE_N | PARTIAL}
+
+## What was done
+- [List of completed phases with key outcomes]
+- Commits: {commit_list}
+
+## What is blocked (if any)
+- [Phase that failed + reason]
+- [Unresolved review findings]
+
+## Next recommended action
+- [Specific next step: "Run verification again after fixing X", "Resume with /pipeline", etc.]
+
+## Key decisions made
+- Decision #1: {choice} — {reason}
+- Decision #2: {choice} — {reason}
+
+## Files to read for context
+- Spec: {path}
+- Plan: {path}
+- Review: {path}
+```
+
+This enables a new Claude session to pick up where the previous one left off by reading handoff.md instead of replaying the entire conversation.
+
+---
+
 ## Important Rules
 
 1. **Do NOT reimplement SuperPowers or Codex skills.** Invoke them. They are the real thing.
@@ -431,6 +539,8 @@ Log: `[timestamp] Phase 8 complete: wiki updated (N pages)`
 3. **Codex reviews are FOREGROUND.** Claude waits, shows "Codex is reviewing...", reads the result.
 4. **If user types anything other than A-E:** treat as free-form comment and adapt.
 5. **Each phase outputs to session dir** with numbered filenames for traceability.
-6. **Session can be resumed.** Check session.log for last completed phase and continue from there.
+6. **Session can be resumed.** Check checkpoint.json for last completed phase and continue from there.
 7. **SuperPowers specs and plans** are saved to their own directories (`docs/superpowers/specs/`, `docs/superpowers/plans/`). CLoClo copies or symlinks them into the session dir for session tracking.
 8. **Wiki ingest is automatic and silent.** If no wiki exists, Phase 8 is skipped without mention. The wiki grows transparently as the user works.
+9. **Checkpoint after every phase.** Write checkpoint.json immediately after each phase succeeds.
+10. **Handoff on exit.** Write handoff.md at the end of every pipeline run, regardless of outcome.

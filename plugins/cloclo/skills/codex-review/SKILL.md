@@ -150,7 +150,53 @@ Agent(
   [timestamp] Review (type=spec, engine=codex|claude) complete: /path/to/output_file
   ```
 
-## 4. Important Rules
+## 4. Adversarial Triple-Perspective Pass
+
+After the primary review (Codex or Claude fallback) completes, run a mandatory adversarial pass. This prevents rubber-stamp PASS verdicts by forcing three failure-seeking perspectives.
+
+**When to run:** Always in `ship` maturity. In `dev` maturity, run only for `impl` reviews. Skip in `spike` maturity.
+
+**How:** Append these three questions to the review output file, then dispatch a single Haiku agent to answer all three:
+
+```
+## Adversarial Analysis
+
+### Skeptic — "Which assumption is most likely wrong?"
+[Identify the strongest assumption in the reviewed artifact and explain how it could fail]
+
+### Devil's Advocate — "How could this be misused or fail unexpectedly?"
+[Describe a realistic scenario where this code/spec causes harm despite passing review]
+
+### Edge-Case Hunter — "What input causes silent failure?"
+[Find one concrete input or state that produces wrong results without raising an error]
+```
+
+**Rules:**
+- Each perspective MUST produce at least one concrete scenario (not "everything looks fine")
+- Scenarios judged unrealistic must include quantitative rationale ("this requires >10^9 concurrent users")
+- Realistic scenarios are tagged `[ADVERSARIAL-REAL]` and escalated to findings
+- The adversarial section is appended to the same output file, not a separate file
+
+## 5. Evidence Tagging
+
+Every finding in the review must be tagged with its evidence source:
+
+| Tag | Meaning | Weight |
+|-----|---------|--------|
+| `[TOOL]` | Finding backed by tool output (test failure, type error, lint warning) | Full weight |
+| `[CODE]` | Finding backed by reading actual code at file:line | Full weight |
+| `[LLM-JUDGMENT]` | Finding based on LLM reasoning alone, no tool/code evidence | Half weight — may be wrong |
+
+**Rule:** If `[LLM-JUDGMENT]` findings outnumber `[TOOL]` + `[CODE]` findings, the review is flagged as low-evidence. The calling skill shows: `"⚠ Review is mostly LLM judgment — consider running tests before integrating findings."`
+
+## 6. Severity Escalation
+
+When both Codex and Claude review the same artifact (e.g., Codex primary + Claude adversarial):
+- **Highest severity wins.** If Codex says P2 and Claude says P0 → final is P0.
+- **Only the original reviewer can de-escalate** with explicit technical reasoning citing file:line.
+- **Cross-model agreement** (both flag same issue) → severity is confirmed and marked `[CONSENSUS]`.
+
+## 7. Important Rules
 
 - **NEVER summarize or filter findings.** Raw file, as written by the reviewer.
 - **NEVER re-run automatically.** User decides via decision points A-E.
@@ -158,3 +204,4 @@ Agent(
 - **Foreground ONLY.** No background promises, no polling loops.
 - **Clean up temp files.** Codex prompt in `/tmp/` is deleted. Output in `session_dir/` is permanent.
 - **Log which engine was used.** The calling skill and the user should know if the review came from Codex or Claude.
+- **Tag every finding.** `[TOOL]`, `[CODE]`, or `[LLM-JUDGMENT]` — no untagged findings.
