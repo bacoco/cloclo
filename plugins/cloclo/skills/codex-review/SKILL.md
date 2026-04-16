@@ -196,7 +196,64 @@ When both Codex and Claude review the same artifact (e.g., Codex primary + Claud
 - **Only the original reviewer can de-escalate** with explicit technical reasoning citing file:line.
 - **Cross-model agreement** (both flag same issue) → severity is confirmed and marked `[CONSENSUS]`.
 
-## 7. Important Rules
+## 7. Convergence-Gated Critic Loop
+
+When the calling skill requests iterative review (e.g., `iterate: true` parameter), the review enters a convergence loop instead of a single pass.
+
+**Loop logic:**
+1. Run the review (Codex or Claude fallback) → collect findings
+2. If all findings are PASS or DEFER → **converged**, exit loop
+3. If new findings found → apply fixes for FAIL items, log ESCALATE items
+4. Re-review **only changed files** (delta review, not full re-review)
+5. Check convergence: no new findings AND zero fixes applied in this pass → **converged**
+6. Hard cap: **3 iterations maximum** (ship maturity) or **2 iterations** (dev maturity)
+7. On cap exhaustion: report final state regardless of convergence
+
+**Verdicts per finding:**
+| Verdict | Action | Continues loop? |
+|---------|--------|-----------------|
+| `PASS` | No action needed (must cite evidence, not just "looks good") | No |
+| `FAIL` | Auto-fix applied | Yes (re-review needed) |
+| `ESCALATE` | Ambiguous — batch up to 3 ESCALATEs, pause loop, present to user with options | Pauses |
+| `DEFER` | Acknowledged risk, not blocking — documented with rationale | No |
+
+**ESCALATE batching:** When multiple ESCALATEs occur in one pass, batch them into a single user question:
+```
+Review found {N} ambiguous items that need your input:
+
+1. {finding} — Options: A) {approach1} B) {approach2}
+2. {finding} — Options: A) {approach1} B) {approach2}
+3. {finding} — Options: A) {approach1} B) {approach2}
+
+Reply with choices (e.g., "1A 2B 3A") or comment freely.
+```
+
+After user responds, resume the loop with the chosen approach.
+
+## 8. Consensus Matrix (Multi-Model Reviews)
+
+When both Codex AND Claude review the same artifact (available in `ship` maturity or when user requests via Decision Point D):
+
+**Spread detection:** For each finding domain, compute:
+- `consensus` = average severity across models
+- `spread` = max severity - min severity
+
+If `spread > 1 severity level` (e.g., Codex says P2, Claude says P0), flag as `[DISAGREEMENT]` and surface explicitly in the report. Don't hide model disagreements in an average.
+
+**Report table:**
+```markdown
+## Model Consensus
+
+| Domain | Codex | Claude | Consensus | Spread | Flag |
+|--------|-------|--------|-----------|--------|------|
+| Security | P1 | P0 | P0 | 1 | [DISAGREEMENT] |
+| Logic | P2 | P2 | P2 | 0 | [CONSENSUS] |
+| Performance | — | P1 | P1 | 0 | |
+```
+
+Cross-model `[CONSENSUS]` findings (both models flag same issue) are high-confidence — always include, never filter.
+
+## 9. Important Rules
 
 - **NEVER summarize or filter findings.** Raw file, as written by the reviewer.
 - **NEVER re-run automatically.** User decides via decision points A-E.

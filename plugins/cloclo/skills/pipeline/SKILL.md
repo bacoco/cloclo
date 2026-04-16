@@ -199,11 +199,92 @@ If corrections: SuperPowers rewrites → `{session_dir}/06-plan-v2.md`.
 
 ---
 
+## Phase 4.5: Task DAG + Sub-Agent Briefs
+
+Before executing, build a dependency graph and structured briefs from the approved plan.
+
+### Step 1: Build Task DAG
+
+Read the plan and extract tasks. For each task, identify:
+- **Depends on:** which other tasks must complete first (by task number)
+- **Files owned:** files this task will create or modify (exclusive write access)
+- **Files read-only:** files this task needs to read but must NOT modify
+- **Files forbidden:** files this task must never touch (other tasks' owned files)
+
+Produce a DAG (directed acyclic graph) where edges represent dependencies:
+```
+Task 1 (no deps) ──► Task 3 (depends on 1)
+Task 2 (no deps) ──► Task 4 (depends on 2, 3)
+```
+
+Tasks with no mutual dependencies run **in parallel** (same wave). Tasks with dependencies run **after** their prerequisites complete.
+
+### Step 2: Generate Sub-Agent Briefs
+
+For each task, generate a structured brief:
+```markdown
+## Task Brief: {task_number} — {title}
+
+### TASK
+{What to implement — from the plan}
+
+### SCOPE
+- OWNED files (write access): {list}
+- READ-ONLY files: {list}
+- FORBIDDEN files (do not touch): {list}
+
+### SPEC REFERENCE
+{Link to specific section of the spec that defines this task's requirements}
+
+### SUCCESS CRITERIA
+{Numbered acceptance criteria from the spec, e.g., AC-001, AC-002}
+
+### DEPENDENCIES
+- Depends on: {task numbers that must complete first, or "none"}
+- Depended on by: {task numbers waiting for this, or "none"}
+
+### LEARNINGS TO APPLY
+{Relevant entries from .shipguard/mistakes.md or project memory, if any}
+```
+
+Write all briefs to `{session_dir}/task-briefs/task-{N}.md`.
+
+### Step 3: Dispatch Waves
+
+Group tasks into waves based on the DAG:
+- **Wave 1:** All tasks with no dependencies (run in parallel)
+- **Wave 2:** Tasks whose dependencies are all in Wave 1 (run after Wave 1 completes)
+- **Wave N:** And so on
+
+Each wave's agents run in parallel. Between waves, verify all tasks in the previous wave completed successfully before dispatching the next wave.
+
+### Stakes-Based Approval Matrix
+
+Before dispatching each task, classify it on two axes:
+
+| | Easy to reverse | Hard to reverse |
+|---|---|---|
+| **Low stakes** | Auto-dispatch (no confirmation) | Quick confirm: "Task {N} modifies {file} — ok?" |
+| **High stakes** | Show plan, auto-dispatch | **Explicit approval required** — show full brief, wait for "oui" |
+
+**Classification rules:**
+- High stakes = modifies auth, payments, data migration, production config, or >5 files
+- Hard to reverse = modifies database schema, deletes files, changes API contracts
+- Everything else = low stakes + easy to reverse
+
+In `spike` maturity: everything auto-dispatches (no approvals).
+In `dev` maturity: use the matrix above.
+In `ship` maturity: everything requires at least quick confirm.
+
+Write the DAG and wave plan to `{session_dir}/08-task-dag.md`.
+
+---
+
 ## Phase 5: Execute — Invoke `superpowers:subagent-driven-development`
 
 **Invoke Skill("superpowers:subagent-driven-development")**
 
-Input: the approved plan (04-plan.md or 06-plan-v2.md).
+Input: the approved plan (04-plan.md or 06-plan-v2.md) AND the task briefs from Phase 4.5.
 
 This gives you the FULL SuperPowers execution:
 - Fresh subagent per task (no context pollution)
@@ -271,7 +352,31 @@ This gives you the FULL SuperPowers verification:
 If `pipeline.config.md` exists in the session, use its verification commands.
 Otherwise, let the verification skill auto-detect or ask the user.
 
-Log: `[timestamp] Phase 7 complete: {PASSED|FAILED}`
+### AC-Level Spec Compliance Report
+
+After verification passes, produce a machine-readable compliance report mapping every acceptance criterion from the spec to its covering test(s):
+
+```markdown
+## Spec Compliance Report
+
+| AC | Description | Test | Status |
+|----|-------------|------|--------|
+| AC-001 | User can upload PDF | test_upload_pdf() in tests/test_upload.py:42 | COVERED |
+| AC-002 | Upload rejects >50MB files | test_upload_size_limit() in tests/test_upload.py:67 | COVERED |
+| AC-003 | Progress bar shows during upload | — | NOT COVERED |
+| AC-004 | Error toast on network failure | — | NOT COVERED |
+```
+
+**Rules:**
+- Extract ACs from the approved spec (01-spec.md or 03-spec-v2.md). If the spec doesn't have numbered ACs, derive them from requirements sections.
+- For each AC, grep the codebase for tests that exercise that behavior.
+- `COVERED` = at least one passing test directly verifies this criterion.
+- `NOT COVERED` = no test found. Flag for the user's attention.
+- A feature is complete when ALL ACs are COVERED. If any are NOT COVERED, report but don't block (user decides).
+
+Write to `{session_dir}/09-compliance-report.md`.
+
+Log: `[timestamp] Phase 7 complete: {PASSED|FAILED} | AC coverage: {covered}/{total}`
 
 ---
 

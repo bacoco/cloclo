@@ -181,13 +181,35 @@ Ingested: <source-title>
 
 **Trigger:** `/wiki query <question>` or `/wiki <question>` when it looks like a question.
 
-### Phase 1 — Search
+### Phase 1 — Classify Query and Search
 
+**Step 1: Classify the query type** to determine the search strategy:
+
+| Type | Pattern | Strategy |
+|------|---------|----------|
+| **Factual** | "What is X?", "When did Y?" | Direct lookup — find the entity/concept page |
+| **Relational** | "How does X relate to Y?", "What connects A and B?" | Graph walk — find shortest path between pages via `[[wiki-links]]` |
+| **Analytical** | "Why did X happen?", "Compare X vs Y" | Multi-page synthesis — read all pages in the neighborhood |
+| **Gap** | "What don't we know about X?" | Scan sources for mentions without wiki pages |
+| **Exploratory** | "What's interesting about X?" | Neighborhood walk — follow links 2 hops out from entry point |
+
+**Step 2: Find entry points**
 1. Read `wiki/index.md` completely. This is the primary navigation.
 2. Identify 3-10 relevant pages from the index.
-3. Read each relevant page. **Extract the `sources:` list from frontmatter** — this is the provenance chain.
-4. If the question touches something not in the index → Grep across `wiki/pages/` for terms.
-5. For claims that need authoritative verification (technical decisions, audits, disputed facts):
+3. If the question touches something not in the index → Grep across `wiki/pages/` for terms.
+
+**Step 3: Graph-traversal search** (for relational, analytical, and exploratory queries)
+
+Walk the `[[wiki-links]]` graph from entry point pages:
+
+- **Shortest path** (relational queries): Starting from page A and page B, follow outgoing `[[wiki-links]]` via BFS until a common page is found. Read all pages on the path. Max depth: 4 hops.
+- **Neighborhood** (exploratory queries): From the entry point, follow all `[[wiki-links]]` up to N hops (N=2 for quick, N=3 for deep). Read each page. Collect a "neighborhood map" of connected knowledge.
+- **Shared connections** (analytical queries): For two pages A and B, find all pages that link to BOTH. These are the bridge concepts between them.
+
+**Step 4: Read pages with provenance**
+1. Read each relevant page found via index or graph walk.
+2. **Extract the `sources:` list from frontmatter** — this is the provenance chain.
+3. For claims that need authoritative verification (technical decisions, audits, disputed facts):
    read the actual raw source file listed in the page's `sources:` frontmatter.
 
 ### Phase 2 — Synthesize
@@ -200,12 +222,43 @@ Ingested: <source-title>
    If a claim was verified by reading the raw source in Phase 1 step 5, note it.
 3. **Flag gaps** — if the wiki lacks information, say so explicitly. Suggest what source would fill the gap.
 
-### Phase 3 — Optionally File
+### Phase 3 — Auto-File Synthesis Pages
 
-1. If the answer is substantial (>5 sentences) and represents new synthesis, ask:
-   > This answer synthesizes N pages. Save it as a new wiki page?
-2. If yes → create page in `pages/syntheses/` or `pages/topics/`, update index, log.
-3. If no → just log the query.
+A query that traverses the wiki graph generates valuable cross-page inferences. Cache them as synthesis pages to avoid re-deriving the same answer.
+
+**Auto-file when ALL of these are true:**
+- The answer consulted 4+ pages across 2+ subdirectories
+- The answer reveals a cross-page relationship, resolves a contradiction, or identifies a gap
+- No existing synthesis page already covers this (check `wiki/pages/syntheses/`)
+
+**Auto-file synthesis page:**
+```yaml
+---
+title: "{descriptive title}"
+type: synthesis
+synthesis-type: comparison | pattern | contradiction | gap-analysis | framework-application
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+derived-from:
+  - pages/entities/page-a.md
+  - pages/concepts/page-b.md
+  - pages/topics/page-c.md
+sources:
+  - sources/YYYY-MM-DD-source1.md
+  - sources/YYYY-MM-DD-source2.md
+tags: [tag1, tag2]
+---
+```
+
+Add back-links (`[[synthesis-page-name]]`) to the `## Related` section of ALL derived-from pages.
+
+**Ask before filing when:**
+- The answer is substantial (>5 sentences) but doesn't meet auto-file criteria
+- Prompt: `This answer synthesizes {N} pages. Save as wiki page? (oui/non)`
+
+**Never auto-file when:**
+- Factual query with a single source (just a lookup, not a synthesis)
+- Answer is <3 sentences
 
 ### Phase 4 — Log
 
@@ -397,3 +450,11 @@ The lint operation knows this exception and does not flag it as a broken link.
 6. **No external dependencies.** Pure markdown + Claude Code tools.
 7. **Schema evolves.** Update `schema.md` when conventions change — it's a living document.
 8. **Wiki-links resolve by filename.** Glob `wiki/pages/**/<name>.md`. If not found, it's a broken link.
+9. **PII heuristic on every write.** Before writing any wiki page or log entry, scan the content for sensitive data:
+   - Email addresses (`\b[\w.-]+@[\w.-]+\.\w+\b`)
+   - API keys/tokens (`sk-`, `ghp_`, `AKIA`, `Bearer ey`)
+   - Private key headers (`-----BEGIN.*PRIVATE KEY-----`)
+   - Non-RFC1918 IP addresses
+   - Password-like patterns (`password\s*[:=]\s*\S+`, `secret\s*[:=]\s*\S+`)
+   If any match is found: **halt the write**, warn the user, and ask to rewrite without the sensitive data or skip the entry. Never commit credentials to wiki pages.
+10. **Log compaction.** Entries in `log.md` older than 7 days are compacted into weekly summaries (`N ingests, M queries, K lint runs`). Recent 7 days kept in full. Log is reverse-chronological (newest first).
