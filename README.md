@@ -35,14 +35,23 @@ SuperPowers writes the plan ──► implementation plan
     You react
     SuperPowers rewrites ──► final plan
 
-SuperPowers executes ──► code (fresh subagent per task)
+SuperPowers builds task DAG ──► dependency graph with file reservations
+    Tasks without dependencies run in parallel (wave dispatch)
+    Each agent gets a structured brief: owned files, read-only, forbidden
+    Stakes-based approval: low-risk auto-dispatches, high-risk asks first
+
+SuperPowers executes ──► code (fresh subagent per task, bounded retries)
     Codex does a real code review (git diff, type checks, bug hunting)
+    + Adversarial triple-perspective: Skeptic / Devil's Advocate / Edge-Case Hunter
+    + Every finding tagged [TOOL], [CODE], or [LLM-JUDGMENT]
     You react
-    SuperPowers fixes
+    SuperPowers fixes → re-review loop until convergence (3 iterations max)
 
 SuperPowers verifies ──► evidence (commands run, output shown)
+    AC compliance report: each acceptance criterion mapped to covering test
     If UI was touched: agent-browser opens each page, takes screenshots, verifies
     Wiki silently ingests the session (decisions, trade-offs, what was learned)
+    Checkpoint saved — crash here? Resume from this phase next time
 ```
 
 You experience this as a natural conversation. CLoClo orchestrates the phases, inserts Codex reviews at the right moments, and feeds everything into the wiki — without you ever typing a command.
@@ -88,11 +97,25 @@ wiki/
 
 The wiki builds up automatically from pipeline sessions and commits. You never organize anything — Claude does the bookkeeping.
 
+**Graph-traversal queries:** Instead of flat keyword search, the wiki classifies questions (factual, relational, analytical, gap, exploratory) and walks the `[[wiki-link]]` graph — shortest path between concepts, neighborhood exploration, shared connections.
+
+**Auto-synthesis:** When a query traverses 4+ pages across 2+ categories, the answer is cached as a synthesis page with `derived-from` backlinks. Next time someone asks a similar question, the wiki already has the answer.
+
+**PII protection:** Every wiki write is scanned for emails, API keys, passwords, and private key headers. Matches block the write and warn the user.
+
 ### Codex reviews (independent verification)
 
 [Codex](https://github.com/openai/codex-plugin-cc) freely explores your codebase (30-80+ files) and verifies that specs, plans, and code actually match reality. It catches things Claude missed. You see the findings and decide what to do — integrate, ignore, or dig deeper.
 
 If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls back to a Claude subagent for reviews. Less independent than Codex (same model family), but still catches real bugs because the reviewer has fresh context. Reviews are never skipped entirely.
+
+**Adversarial triple-perspective:** After every review, three mandatory failure-seeking perspectives run — Skeptic ("which assumption is wrong?"), Devil's Advocate ("how could this fail?"), Edge-Case Hunter ("what input causes silent failure?"). Prevents rubber-stamp PASS verdicts.
+
+**Evidence tagging:** Every finding is tagged `[TOOL]` (test/lint output), `[CODE]` (file:line evidence), or `[LLM-JUDGMENT]` (reasoning only). Low-evidence reviews are flagged.
+
+**Convergence loop:** In `ship` maturity, reviews iterate until convergence — fix findings, re-review changed files, repeat up to 3 times. Findings can be PASS, FAIL (auto-fix), ESCALATE (ask user), or DEFER (acknowledged risk).
+
+**Consensus matrix:** When both Codex and Claude review, spread detection flags disagreements (one says P0, other says P2). Highest severity from any model wins.
 
 ### Visual verification (agent-browser)
 
@@ -121,40 +144,26 @@ Every session after that:
     ├─► Wiki state loaded into Claude's context (automatic)
     ├─► You describe what you want → full dev cycle runs (automatic)
     │     SuperPowers handles workflow
-    │     Codex reviews between phases
+    │     Codex reviews between phases (adversarial + evidence-tagged)
     │     agent-browser verifies UI
-    ├─► You commit → wiki updates (automatic)
-    └─► You ask questions → wiki answers with citations (automatic)
+    │     Checkpoint saved after each phase (crash-safe)
+    ├─► You commit → wiki updates (automatic, PII-protected)
+    ├─► You ask questions → wiki answers with graph traversal + citations
+    ├─► Something goes wrong → /rollback (soft or hard)
+    └─► Session ends → handoff.md written for next session continuity
 ```
 
+**Maturity levels** control how strictly CLoClo runs:
+
+| Level | Gate strictness | Agents | Reviews |
+|-------|----------------|--------|---------|
+| `spike` | Soft (skip freely) | 1 | Optional |
+| `dev` | Standard (A-E decisions) | Up to 3 | All phases |
+| `ship` | Hard (documented skip only) | Up to 5 | Adversarial + convergence loop |
+
+Auto-detected from project state (no tests → spike, CI passing → ship), or set manually in `pipeline.config.md`.
+
 The loop: **build → review → verify → learn → build better next time.**
-
-## What's New (2026-04-16)
-
-17 techniques from a GitHub-wide scout of 8 repos, implemented across all skills:
-
-**Pipeline:**
-- **Maturity levels** (spike/dev/ship) — one field controls gate strictness, parallelism, review depth
-- **Task DAG** — dependency graph with wave-based parallel dispatch, file reservations per agent
-- **Checkpoint/resume** — crash mid-pipeline? Resume from last completed phase
-- **Session handoff** — auto-written handoff.md for multi-session continuity
-- **Bounded retries** — hard ceilings per phase (2-3 max), no infinite loops
-- **AC compliance report** — acceptance criteria mapped to covering tests
-- **Stakes-based approval matrix** — auto/confirm/explicit by risk level
-
-**Codex Review:**
-- **Adversarial triple-perspective** — Skeptic, Devil's Advocate, Edge-Case Hunter after every review
-- **Evidence tagging** — `[TOOL]`/`[CODE]`/`[LLM-JUDGMENT]` on every finding
-- **Convergence-gated critic loop** — iterative fix/re-review with PASS/FAIL/ESCALATE/DEFER verdicts
-- **Consensus matrix** — spread detection when multiple models review the same artifact
-
-**Wiki:**
-- **Graph-traversal queries** — 5 query types (factual/relational/analytical/gap/exploratory) with BFS walks
-- **Auto-synthesis pages** — cached cross-page inferences with derived-from backlinks
-- **PII heuristic** — blocks credentials/secrets from being written to wiki pages
-- **Log compaction** — weekly summaries for entries >7 days old
-
-**New skill: /rollback** — soft (uncommit, keep files) or hard (revert), safety checks, checkpoint update
 
 ## Pause / Resume
 
