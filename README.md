@@ -92,7 +92,7 @@ The wiki builds up automatically from pipeline sessions and commits. You never o
 
 [Codex](https://github.com/openai/codex-plugin-cc) freely explores your codebase (30-80+ files) and verifies that specs, plans, and code actually match reality. It catches things Claude missed. You see the findings and decide what to do — integrate, ignore, or dig deeper.
 
-If Codex is not installed, CLoClo skips the review phases. Everything else works.
+If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls back to a Claude subagent for reviews. Less independent than Codex (same model family), but still catches real bugs because the reviewer has fresh context. Reviews are never skipped entirely.
 
 ### Visual verification (agent-browser)
 
