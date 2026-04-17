@@ -117,6 +117,19 @@ If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls
 
 **Consensus matrix:** When both Codex and Claude review, spread detection flags disagreements (one says P0, other says P2). Highest severity from any model wins.
 
+### Model selection (Opus quota optimization)
+
+CLoClo uses a mixed-model strategy to balance review quality against Max plan weekly Opus cap (24-40h/week vs 240-480h/week for Sonnet).
+
+- **Reviewers (spec, plan, impl — Codex fallback)** → **Opus 4.7** — the +8 pts SWE-bench Verified gap over Sonnet 4.6 catches real cross-file bugs.
+- **Implementer subagents (1-2 files, clear spec)** → **Sonnet 4.6** — mechanical work where Opus adds no measurable quality.
+- **Implementer subagents (>5 files, architecture)** → **Opus 4.7** — cross-file coherence required.
+- **DAG building, verification, visual verification** → **Sonnet 4.6** — scripted / tools-driven.
+- **Brainstorming, writing-plans, reviewers** → **Opus 4.7** — design judgment.
+- **Adversarial triple-perspective pass** → **Haiku 4.5** — read-only questions.
+
+See [Model Selection Policy](plugins/cloclo/skills/pipeline/SKILL.md#model-selection-policy) in the pipeline skill for the full matrix.
+
 ### Visual verification (agent-browser)
 
 After UI changes, [agent-browser](https://github.com/vrsalis/agent-browser) opens the affected pages, takes screenshots, and verifies the UI matches the spec. If agent-browser is not installed, visual verification is skipped with a warning.

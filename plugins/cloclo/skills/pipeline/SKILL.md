@@ -11,6 +11,33 @@ Codex review phases and interactive decision points.
 **CLoClo does NOT reimplement brainstorming, planning, execution, or verification.**
 It invokes the real skills and adds Codex reviews + decision points between them.
 
+## Model Selection Policy
+
+**CLoClo uses a mixed-model strategy to balance quality vs. quota consumption.**
+
+On Max 20x / Max 5x plans, Opus has a tight weekly cap (~24-40h vs ~240-480h for Sonnet). Opus 4.7 is ~8 points ahead of Sonnet 4.6 on SWE-bench Verified — that gap matters for review/audit but is wasted on mechanical work.
+
+Apply this policy when dispatching subagents across phases:
+
+| Work type | Model | Why |
+|-----------|-------|-----|
+| Reviewers (spec, plan, impl — Phase 2/4/6 Codex fallback) | **Opus** | +8 pts SWE-bench Verified = real bugs caught |
+| Adversarial triple-perspective pass | **Haiku** | Read-only skeptic questions |
+| Phase 1 brainstorming (main session) | **Opus** | Design judgment, dialogue |
+| Phase 3 writing-plans (main session) | **Opus** | Cross-module coherence |
+| Phase 4.5 Task DAG + briefs | **Sonnet** | Mechanical decomposition of an approved plan |
+| Phase 5 implementer subagents (1-2 files, clear spec) | **Sonnet** | Spec is the blueprint, implementation is mechanical |
+| Phase 5 implementer subagents (touches >5 files, architecture) | **Opus** | Cross-file coherence required |
+| Phase 5 spec reviewer / code-quality reviewer subagents | **Opus** | Reviews benefit from the +8 pts gap |
+| Phase 7 verification-before-completion | **Sonnet** | Run tests + read output, no design judgment |
+| Phase 7.5 visual verification (agent-browser) | **Sonnet** | Scripted capture + visual check |
+
+**Override rule:** Critical domains (auth, payments, data migration, security) always use Opus regardless of the table above.
+
+**How to apply in practice:** When invoking SuperPowers skills that dispatch subagents (`subagent-driven-development`, `writing-plans`), pass the `model` parameter on each `Agent(...)` call explicitly. Do not rely on inherit — inherit defaults to the main session's model which is typically Opus.
+
+---
+
 ## Prerequisites — Auto-Install
 
 At pipeline start, check and **automatically fix** missing dependencies.
@@ -295,6 +322,12 @@ This gives you the FULL SuperPowers execution:
 - Process flow with decision diamonds
 - Red flags and anti-patterns
 - Final integration review
+
+**Model Selection — apply the policy from the top of this SKILL.md:**
+- Implementer subagents: `model: "sonnet"` by default. Upgrade to `model: "opus"` only if the task touches >5 files or requires architectural judgment.
+- Spec reviewer subagents: always `model: "opus"` (the review step is where bugs are caught).
+- Code-quality reviewer subagents: always `model: "opus"`.
+- If an implementer returns `BLOCKED` on a Sonnet dispatch and the blocker is a reasoning issue, re-dispatch with `model: "opus"`.
 
 Log: `[timestamp] Phase 5 complete: [commit list]`
 

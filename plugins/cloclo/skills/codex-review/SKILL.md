@@ -75,11 +75,14 @@ but far better than skipping the review.
 
 ### Dispatch by review_type
 
+**Model: always Opus for review fallback.** Reviews are where the +8 points SWE-bench Verified gap between Opus 4.7 and Sonnet 4.6 translates to real bugs caught. Do not downgrade the fallback reviewer to Sonnet.
+
 **For `spec` review:**
 
 ```
 Agent(
   subagent_type: "superpowers:code-reviewer",
+  model: "opus",
   prompt: "Review this implementation spec: {input_file}
 
   You are a senior reviewer. Read the spec, explore the codebase, and verify:
@@ -99,6 +102,7 @@ Agent(
 ```
 Agent(
   subagent_type: "superpowers:code-reviewer",
+  model: "opus",
   prompt: "Review this implementation plan: {input_file}
   Based on the spec: {spec_path}
 
@@ -120,6 +124,7 @@ Agent(
 ```
 Agent(
   subagent_type: "superpowers:code-reviewer",
+  model: "opus",
   prompt: "Review this implementation against its spec and plan.
 
   Spec: {spec_path}
@@ -156,7 +161,7 @@ After the primary review (Codex or Claude fallback) completes, run a mandatory a
 
 **When to run:** Always in `ship` maturity. In `dev` maturity, run only for `impl` reviews. Skip in `spike` maturity.
 
-**How:** Append these three questions to the review output file, then dispatch a single Haiku agent to answer all three:
+**How:** Append these three questions to the review output file, then dispatch a single **Haiku** agent (`model: "haiku"`) to answer all three — this is a cheap, read-only pass:
 
 ```
 ## Adversarial Analysis
