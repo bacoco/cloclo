@@ -1,6 +1,6 @@
 {
   "name": "cloclo",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "CLoClo — Dev pipeline (Claude+Codex CLI+CodeRabbit+Gemini Code Assist reviews on PR; Codex Cloud opt-in) + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki (persistent knowledge base) + behavioral patterns.",
   "author": {
     "name": "Loic Baconnier"

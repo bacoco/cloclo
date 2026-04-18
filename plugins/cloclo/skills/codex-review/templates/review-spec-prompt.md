@@ -13,12 +13,18 @@ Voici une spec d'implementation : {{SPEC_PATH}}
 
 Tu es un reviewer senior. Fais ce que tu veux :
 - Lis la spec
-- Explore le codebase autant que necessaire (tu as acces lecture complet : read_file, grep, find, git log, etc.)
+- Explore le codebase autant que necessaire — tu as acces lecture complet (file read, grep, find, git log, whatever your runtime provides)
 - Verifie que chaque affirmation de la spec correspond a la realite du code
 - Verifie que les fichiers, fonctions, lignes mentionnes existent vraiment
 - Identifie ce qui manque, ce qui est faux, ce qui est risque
 
-Format libre. Tu es le patron de ta review. Prends le temps qu'il faut.
+Format de sortie obligatoire (sinon le pipeline ne peut pas consommer la review) :
+- Verdict global : PASS / CONCERNS / FAIL
+- Findings numerotes avec severite P0 / P1 / P2
+- Chaque finding tagge `[TOOL]`, `[CODE]`, ou `[LLM-JUDGMENT]`
+- Refs `file:line` obligatoires pour tout finding `[CODE]`
+
+Prends le temps qu'il faut. Sois exhaustif.
 
 ---
 

@@ -6,11 +6,16 @@
 docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 ├── 01-spec.md                      ← from superpowers:brainstorming
 ├── 02-codex-review-spec.md         ← from codex-review skill
+├── 02-glm-review-spec.md           ← from glm-review skill (parallel with Codex)
+├── 02-codex-review-spec.md.runtime.log  ← stderr from codex exec
+├── 02-glm-review-spec.md.runtime.log    ← stderr from claude -p (GLM)
 ├── 03-spec-v2.md                   ← if corrections after review
 ├── 04-plan.md                      ← from superpowers:writing-plans
 ├── 05-codex-review-plan.md         ← from codex-review skill
+├── 05-glm-review-plan.md           ← from glm-review skill (parallel)
 ├── 06-plan-v2.md                   ← if corrections after review
 ├── 07-codex-review-impl.md         ← from codex-review skill
+├── 07-glm-review-impl.md           ← from glm-review skill (parallel)
 ├── 07b-coderabbit-review-impl.md   ← from coderabbit-review skill (Phase 6.5)
 ├── 08-task-dag.md                  ← from Phase 4.5
 ├── 09-compliance-report.md         ← AC-level coverage (Phase 7)
@@ -25,6 +30,8 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 ├── handoff.md                      ← auto-written at end of every run
 └── pipeline.config.md              ← optional verification config
 ```
+
+**Runtime logs**: each review (codex-review, glm-review) writes its stderr/process output to `{output_file}.runtime.log` as a sibling of the review file. The review content itself lives in the `.md` file. If a review fails (empty file), the runtime log is the first place to look for diagnostics.
 
 ## Session Log Format
 

@@ -14,13 +14,19 @@ Base sur la spec : {{SPEC_PATH}}
 
 Tu es un reviewer senior. Fais ce que tu veux :
 - Lis le plan en detail
-- Explore le codebase autant que necessaire (acces lecture complet : read_file, grep, find, git log, etc.)
+- Explore le codebase autant que necessaire — acces lecture complet (file read, grep, find, git log, whatever your runtime provides)
 - Verifie que chaque fichier/ligne/fonction mentionne existe reellement
 - Verifie que le plan couvre bien tout ce que la spec demande
 - Identifie les risques d'implementation, les edge cases oublies
 - Verifie que les tasks sont dans le bon ordre (pas de dependances circulaires)
 
-Format libre. Prends le temps qu'il faut.
+Format de sortie obligatoire :
+- Verdict global : PASS / CONCERNS / FAIL
+- Findings numerotes avec severite P0 / P1 / P2
+- Chaque finding tagge `[TOOL]`, `[CODE]`, ou `[LLM-JUDGMENT]`
+- Refs `file:line` obligatoires pour tout finding `[CODE]`
+
+Prends le temps qu'il faut.
 
 ---
 

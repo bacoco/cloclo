@@ -93,11 +93,18 @@ PROMPT_FILE="/tmp/cloclo-glm-prompt-${TS}.md"
 
 echo "GLM-5.1 is reviewing... (this takes 2-8 minutes). Output: $output_file"
 
+# Pre-clear stale review file — prevents the post-run guard from accepting
+# an old file as success when GLM silently skips the Write call.
+rm -f "$output_file"
+
+# Stderr routed to sibling runtime log for diagnosability; only $output_file
+# is the review content (written by GLM via Write tool).
 ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
 ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
 ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
 ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
-claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")"
+claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")" \
+  > "${output_file}.runtime.log" 2>&1
 GLM_EXIT=$?
 
 rm -f "$PROMPT_FILE"
@@ -105,7 +112,7 @@ rm -f "$PROMPT_FILE"
 
 **No `> "$output_file"` redirect.** GLM calls Write tool itself, targeting
 `{{OUTPUT_PATH}}` resolved inside the prompt. This matches Codex's behavior
-(via `codex task --write`) and gives the caller a single file contract: "read
+(via `codex exec -s read-only -o`) and gives the caller a single file contract: "read
 the output_file after the call" — regardless of which reviewer produced it.
 
 ### Why the env var pattern works
@@ -140,9 +147,10 @@ Log to `session.log`:
 ## 5. Running in Parallel with codex-review
 
 The pipeline dispatches both reviewers as background jobs and waits for both.
-Each reviewer writes its review to its own `output_file` via its Write tool
-(Codex → `codex task --write`, GLM → `claude -p` with `acceptEdits`). The
-pipeline reads those files after both jobs complete — it never parses stdout.
+Each reviewer writes its review to its own `output_file` via its native mechanism
+(Codex → `codex exec -s read-only -o`, GLM → `claude -p` with `acceptEdits` +
+Write tool). The pipeline reads those files after both jobs complete — it never
+parses stdout.
 
 ```bash
 # In the pipeline's Phase 2/4/6 orchestration:

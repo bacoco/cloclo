@@ -48,11 +48,17 @@ command -v codex &>/dev/null || CODEX_UNAVAILABLE=1
 ```bash
 echo "Codex is reviewing (read-only sandbox)... output -> $output_file"
 
+# Pre-clear any stale review file from a previous invocation — prevents the
+# post-run guard `[ -s "$output_file" ]` from validating old content as success.
+rm -f "$output_file"
+
+# Keep stderr for diagnosability (auth expired, quota, network) — route it to a
+# sibling runtime log instead of /dev/null. Only $output_file is the review.
 codex exec \
   -s read-only \
   -o "$output_file" \
   "$(cat "$PROMPT_FILE")" \
-  > /dev/null 2>&1
+  > "${output_file}.runtime.log" 2>&1
 CODEX_EXIT=$?
 
 rm -f "$PROMPT_FILE"
@@ -105,23 +111,61 @@ but far better than skipping the review.
 
 **Model: always Opus for review fallback.** Reviews are where the +8 points SWE-bench Verified gap between Opus 4.7 and Sonnet 4.6 translates to real bugs caught. Do not downgrade the fallback reviewer to Sonnet.
 
+**Subagent type selection**: use `superpowers:code-reviewer` if available, else fall back to `general-purpose`. Check once before dispatching:
+
+```bash
+# Check if the superpowers:code-reviewer subagent exists; degrade gracefully.
+if claude agent list 2>/dev/null | grep -q "superpowers:code-reviewer"; then
+  SUBAGENT_TYPE="superpowers:code-reviewer"
+else
+  SUBAGENT_TYPE="general-purpose"
+fi
+```
+
+**Pre-clear output file** before dispatch (same guarantee as Codex path):
+
+```bash
+rm -f "$output_file"
+```
+
+All three fallback prompts share the same `OBJECTIF FINAL` / `RAPPEL FINAL` sandwich as the main templates — never a weaker contract in the fallback path.
+
 **For `spec` review:**
 
 ```
 Agent(
-  subagent_type: "superpowers:code-reviewer",
+  subagent_type: $SUBAGENT_TYPE,
   model: "opus",
-  prompt: "Review this implementation spec: {input_file}
+  prompt: '''
+**OBJECTIF FINAL — lis en PREMIER, relis en DERNIER**:
 
-  You are a senior reviewer. Read the spec, explore the codebase, and verify:
-  - Every file, function, and hook mentioned actually exists
-  - The architecture is feasible
-  - Edge cases and fallbacks are defined
-  - No contradictions between sections
+Tu DOIS ecrire ta review complete au format markdown dans ce fichier via le tool Write :
+{output_file}
 
-  Write your review to: {output_file}
+Un fichier {output_file} vide ou manquant = echec total du review, peu importe la qualite de ton analyse interne.
 
-  Format: Verdict, then findings with severity (P0/P1/P2), file refs, and line numbers."
+---
+
+Review this implementation spec: {input_file}
+
+You are a senior reviewer. Read the spec, explore the codebase, and verify:
+- Every file, function, and hook mentioned actually exists
+- The architecture is feasible
+- Edge cases and fallbacks are defined
+- No contradictions between sections
+
+Format de sortie obligatoire (sinon le pipeline ne peut pas consommer la review) :
+- Verdict (PASS / CONCERNS / FAIL)
+- Findings numerotes avec severite P0 / P1 / P2
+- Chaque finding tagge [TOOL], [CODE], ou [LLM-JUDGMENT]
+- Refs file:line obligatoires
+
+---
+
+**RAPPEL FINAL AVANT DE CONCLURE** :
+- {output_file} doit exister et etre non-vide.
+- Si tu ne l'as pas encore ecrit : APPELLE Write tool MAINTENANT avec le contenu complet.
+'''
 )
 ```
 
@@ -129,21 +173,40 @@ Agent(
 
 ```
 Agent(
-  subagent_type: "superpowers:code-reviewer",
+  subagent_type: $SUBAGENT_TYPE,
   model: "opus",
-  prompt: "Review this implementation plan: {input_file}
-  Based on the spec: {spec_path}
+  prompt: '''
+**OBJECTIF FINAL — lis en PREMIER, relis en DERNIER**:
 
-  You are a senior reviewer. Read the plan, explore the codebase, and verify:
-  - Every file/function/hook mentioned exists and has the right signature
-  - The plan covers everything the spec requires
-  - Task order has no circular dependencies
-  - Code snippets will compile against real types
-  - Edge cases from the spec have matching implementation steps
+Tu DOIS ecrire ta review complete au format markdown dans ce fichier via le tool Write :
+{output_file}
 
-  Write your review to: {output_file}
+Un fichier {output_file} vide ou manquant = echec total du review.
 
-  Format: Verdict, then findings with severity (P0/P1/P2), file refs, and line numbers."
+---
+
+Review this implementation plan: {input_file}
+Based on the spec: {spec_path}
+
+You are a senior reviewer. Read the plan, explore the codebase, and verify:
+- Every file/function/hook mentioned exists and has the right signature
+- The plan covers everything the spec requires
+- Task order has no circular dependencies
+- Code snippets will compile against real types
+- Edge cases from the spec have matching implementation steps
+
+Format de sortie obligatoire :
+- Verdict (PASS / CONCERNS / FAIL)
+- Findings numerotes avec severite P0 / P1 / P2
+- Chaque finding tagge [TOOL], [CODE], ou [LLM-JUDGMENT]
+- Refs file:line obligatoires
+
+---
+
+**RAPPEL FINAL AVANT DE CONCLURE** :
+- {output_file} doit exister et etre non-vide.
+- APPELLE Write tool MAINTENANT si pas deja fait.
+'''
 )
 ```
 
@@ -151,26 +214,45 @@ Agent(
 
 ```
 Agent(
-  subagent_type: "superpowers:code-reviewer",
+  subagent_type: $SUBAGENT_TYPE,
   model: "opus",
-  prompt: "Review this implementation against its spec and plan.
+  prompt: '''
+**OBJECTIF FINAL — lis en PREMIER, relis en DERNIER**:
 
-  Spec: {spec_path}
-  Plan: {plan_path}
-  Base ref: {base_ref}
-  Commits: {commit_list}
+Tu DOIS ecrire ta review complete au format markdown dans ce fichier via le tool Write :
+{output_file}
 
-  Run git diff {base_ref}..HEAD to see all changes. Read each modified file in full.
-  Verify:
-  - Implementation matches the spec
-  - Hook signatures, field names, and types are correct
-  - Fallbacks defined for empty/error states
-  - No regressions in modified files
-  - Mobile responsive if UI was touched
+Un fichier {output_file} vide ou manquant = echec total du review.
 
-  Write your review to: {output_file}
+---
 
-  Format: Verdict, then findings with severity (P0/P1/P2), file refs, and line numbers."
+Review this implementation against its spec and plan.
+
+Spec: {spec_path}
+Plan: {plan_path}
+Base ref: {base_ref}
+Commits: {commit_list}
+
+Run `git diff {base_ref}..HEAD` to see all changes. Read each modified file in full.
+Verify:
+- Implementation matches the spec
+- Hook signatures, field names, and types are correct
+- Fallbacks defined for empty/error states
+- No regressions in modified files
+- Mobile responsive if UI was touched
+
+Format de sortie obligatoire :
+- Verdict (PASS / CONCERNS / FAIL)
+- Findings numerotes avec severite P0 / P1 / P2
+- Chaque finding tagge [TOOL], [CODE], ou [LLM-JUDGMENT]
+- Refs file:line obligatoires
+
+---
+
+**RAPPEL FINAL AVANT DE CONCLURE** :
+- {output_file} doit exister et etre non-vide.
+- APPELLE Write tool MAINTENANT si pas deja fait.
+'''
 )
 ```
 

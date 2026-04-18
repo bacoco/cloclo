@@ -98,7 +98,7 @@ Examples:
    ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
    ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
    ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
-   claude -p "$(cat "$PROMPT_FILE")"
+   claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")"
    rm -f "$PROMPT_FILE"
    ```
 

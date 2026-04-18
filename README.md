@@ -29,12 +29,13 @@ CLoClo detects a feature request. Behind the scenes:
 
 ```
 SuperPowers brainstorms with you ──► spec
-    Codex independently reviews the spec
+    Codex + GLM-5.1 review the spec independently, in parallel
+    Two independent frontier models = two perspectives; consensus matrix when they agree
     You react ("integrate all" / "point 2 is wrong" / anything)
     SuperPowers rewrites ──► final spec
 
 SuperPowers writes the plan ──► implementation plan
-    Codex independently reviews the plan
+    Codex + GLM-5.1 review the plan independently, in parallel
     You react
     SuperPowers rewrites ──► final plan
 
@@ -44,16 +45,17 @@ SuperPowers builds task DAG ──► dependency graph with file reservations
     Stakes-based approval: low-risk auto-dispatches, high-risk asks first
 
 SuperPowers executes ──► code (fresh subagent per task, bounded retries)
-    Codex does a real code review (git diff, type checks, bug hunting)
+    Codex + GLM-5.1 do real code review (git diff, type checks, bug hunting), in parallel
     + Adversarial triple-perspective: Skeptic / Devil's Advocate / Edge-Case Hunter
     + Every finding tagged [TOOL], [CODE], or [LLM-JUDGMENT]
+    + Consensus matrix when Codex + GLM agree on a finding → [CONSENSUS], severity escalated
     You react
     SuperPowers fixes → re-review loop until convergence (3 iterations max)
 
 CodeRabbit reviews the same commits (static analysis + AI)
     Lint / security / style findings with file:line precision
     Severity mapped to P0/P1/P2/P3
-    When CodeRabbit AND Codex flag the same line → [CONSENSUS], severity escalated
+    When CodeRabbit AND Codex/GLM flag the same line → [CONSENSUS], severity escalated
     When they disagree → [DISAGREEMENT] surfaced, no averaging
     You react (A/B/C/D/E or free comment)
 
