@@ -1,12 +1,13 @@
-# CLoClo — Code Loop Orchestrator: Claude + Codex
+# CLoClo — Code Loop Orchestrator: Claude + Codex + CodeRabbit
 
 A Claude Code plugin that works invisibly. You code normally — CLoClo handles the rest:
 
 - **Codex reviews your specs, plans, and code** between each development phase
+- **CodeRabbit runs static analysis** on every implementation before verification
 - **A persistent wiki compounds your project knowledge** with every change you make
 - **UI changes get visual verification** automatically via agent-browser
 
-You never need to call a command. CLoClo detects what you're doing and acts.
+You never need to call a command. CLoClo detects what you're doing and acts — or use `/coderabbit` to run a CodeRabbit review on demand, outside the pipeline.
 
 ## Installation
 
@@ -46,6 +47,13 @@ SuperPowers executes ──► code (fresh subagent per task, bounded retries)
     + Every finding tagged [TOOL], [CODE], or [LLM-JUDGMENT]
     You react
     SuperPowers fixes → re-review loop until convergence (3 iterations max)
+
+CodeRabbit reviews the same commits (static analysis + AI)
+    Lint / security / style findings with file:line precision
+    Severity mapped to P0/P1/P2/P3
+    When CodeRabbit AND Codex flag the same line → [CONSENSUS], severity escalated
+    When they disagree → [DISAGREEMENT] surfaced, no averaging
+    You react (A/B/C/D/E or free comment)
 
 SuperPowers verifies ──► evidence (commands run, output shown)
     AC compliance report: each acceptance criterion mapped to covering test
@@ -117,6 +125,25 @@ If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls
 
 **Consensus matrix:** When both Codex and Claude review, spread detection flags disagreements (one says P0, other says P2). Highest severity from any model wins.
 
+### CodeRabbit reviews (static analysis + AI)
+
+[CodeRabbit CLI](https://cli.coderabbit.ai) complements Codex. Where Codex catches architectural and spec-compliance issues by exploring the codebase, CodeRabbit catches lint, security, and style issues with static-analysis backing. The pipeline runs both at Phase 6 / Phase 6.5 — Codex first (architecture), then CodeRabbit (static) on the same commit range.
+
+```bash
+# What CLoClo runs under the hood at Phase 6.5
+coderabbit review --agent --type committed --base <base_ref>
+```
+
+**When one reviewer flags something:** presented as-is, decision point A-E (integrate all / some / ignore / dig deeper / edit yourself).
+
+**When BOTH flag the same file:line:** marked `[CONSENSUS]`, severity escalated to the higher of the two, presented first.
+
+**When they disagree** (Codex says P2, CodeRabbit says P0, or vice versa): marked `[DISAGREEMENT]`, both opinions surfaced explicitly — no averaging, no hiding the split.
+
+**Standalone command:** `/coderabbit` runs a CodeRabbit review on your current changes (committed or uncommitted) without going through the full pipeline. Useful before opening a PR, or to sanity-check a quick fix.
+
+**Install:** `curl -fsSL https://cli.coderabbit.ai/install.sh | sh` then `coderabbit auth login` once. Missing CodeRabbit is non-blocking — Phase 6.5 skips with a warning; Codex is still the gating reviewer.
+
 ### Model selection (Opus quota optimization)
 
 CLoClo uses a mixed-model strategy to balance review quality against Max plan weekly Opus cap (24-40h/week vs 240-480h/week for Sonnet).
@@ -158,6 +185,7 @@ Every session after that:
     ├─► You describe what you want → full dev cycle runs (automatic)
     │     SuperPowers handles workflow
     │     Codex reviews between phases (adversarial + evidence-tagged)
+    │     CodeRabbit runs static analysis on every implementation
     │     agent-browser verifies UI
     │     Checkpoint saved after each phase (crash-safe)
     ├─► You commit → wiki updates (automatic, PII-protected)
