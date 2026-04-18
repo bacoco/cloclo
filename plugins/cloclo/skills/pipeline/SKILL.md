@@ -95,31 +95,69 @@ enabling per project, not per pipeline run.
    ```
 4. Optional: `pipeline.config.md` for project-specific verification commands
 
-## Decision Point Format
+## Auto-Integration (all review phases)
 
-After each review phase (2, 4, 6, 6.5), present findings raw and ask:
+Review phases 2, 4, 6, 6.5, and 9 all use the SAME auto-integration
+pattern. Findings are applied automatically under three gates; the user is
+only escalated to on genuine blockers.
 
+**The three gates (identical across all phases):**
+
+1. **Concrete revision/patch available** — the reviewer provides a specific
+   section+text (for spec/plan) or a diff/file:line+replacement (for code).
+   Pure "consider refactoring" judgment-only findings are skipped.
+
+2. **Not a design pivot or critical domain** — semantic design alternatives
+   (approach A vs B) on specs, and auth/payments/data-migration code, are
+   NOT auto-applied — escalated instead.
+
+3. **No conflicts across reviewers or findings** — if two findings
+   contradict at the same location, skip both and log `[CONFLICT]`.
+
+**Iteration cap:** 2 rounds for spec/plan, 3 rounds for code. After cap,
+exit with remaining findings recorded in handoff.
+
+**Consensus amplification:** when both Codex (Phase 6) AND CodeRabbit
+(Phase 6.5) flag the same file:line, mark `[CONSENSUS]`, escalate severity
+to the higher of the two, and apply — consensus is high-confidence even if
+the standalone finding would be a skip.
+
+**Escalation (terminal only, no GitHub visit needed):** happens when:
+- Design pivot detected (reviewer proposes approach A vs B on spec)
+- Critical domain touched (auth / payments / data migration)
+- Cross-reviewer `[CONFLICT]` at the same location
+- Iteration cap hit with remaining critical/high findings
+- Patch application failed (merge conflict, compile error)
+
+Escalation message (French — user's local IA language):
 ```
-{Reviewer} a review ton {artifact}. Voici ses findings :
+Phase {N} ne peut pas auto-integrer sans ton input.
 
-[3-5 line summary from the review file]
+Raison : {design_pivot | critical_domain | conflict | cap_hit | apply_failed}
 
-Fichier complet : {session_dir}/{review_file}.md
+Findings bloquants :
+- [file:line] — description — {why it needs human judgment}
 
-Que veux-tu faire ?
+Fichier review complet : {session_dir}/{review_file}.md
 
-A. Integrer tous les findings et continuer
-B. Integrer certains findings (tu precises lesquels)
-C. Ignorer la review et continuer
-D. Demander au reviewer de creuser un point precis
-E. Modifier toi-meme (edite le fichier, dis "c'est bon")
-
-Ou tape un commentaire libre.
+Options :
+A. Choisis une direction ("prends A" / "garde B" / "fusionne")
+B. Corrige toi-meme le fichier, dis "continue"
+C. Skip ces findings, continue le pipeline
 ```
 
-Log the user's choice in `session.log`. After A or B, SuperPowers rewrites
-the artifact. **Do NOT auto-resubmit to the reviewer** — user controls via
-option D.
+## Dual-Reviewer Consensus (Phase 6 + 6.5)
+
+When BOTH Codex (architecture) AND CodeRabbit (static analysis) flag the
+same file:line:
+- Mark `[CONSENSUS]` — high-confidence finding
+- Escalate severity to the higher of the two
+- Apply during Phase 6.5 auto-integration (consensus beats the 3-gate skip)
+
+When reviewers disagree (Codex flags P2, CodeRabbit flags P0 or vice-versa):
+- Mark `[DISAGREEMENT]`
+- If severity spread > 1 level AND the higher is `critical` → escalate
+- Otherwise apply the higher-severity fix and log the disagreement
 
 ## Dual-Reviewer Consensus (Phase 6 + 6.5)
 
@@ -166,9 +204,11 @@ at end of every run for session resume. Full structure:
 ## Important Rules
 
 1. **Do NOT reimplement SuperPowers, Codex, or CodeRabbit skills.** Invoke them.
-2. **After correction (A or B), do NOT auto-resubmit.** User controls via option D.
+2. **Phase 1 (brainstorming) is the ONLY interactive phase by default.** All
+   review phases (2, 4, 6, 6.5, 9) auto-integrate findings under the
+   3-gate rule and only escalate on blockers. User stays in terminal.
 3. **All reviews are FOREGROUND.** Claude waits, shows progress, reads the result.
-4. **Free-form user input at decision points** is valid — treat as comment and adapt.
+4. **Free-form user input** is valid at any escalation point — treat as comment and adapt.
 5. **Each phase outputs to session dir** with numbered filenames for traceability.
 6. **Session can be resumed** via `checkpoint.json`.
 7. **SuperPowers specs and plans** live in their own directories

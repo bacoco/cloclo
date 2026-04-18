@@ -14,18 +14,30 @@ Copy or symlink to `{session_dir}/01-spec.md`.
 
 **GATE:** Do not proceed until user explicitly approves the spec.
 
-## Phase 2: Codex Review Spec
+## Phase 2: Codex Review Spec (Auto-Integrate)
 
 Invoke `codex-review` skill with:
 - `review_type`: `spec`
 - `input_file`: `{session_dir}/01-spec.md`
 - `output_file`: `{session_dir}/02-codex-review-spec.md`
 
-If Codex unavailable → skip with warning, proceed to Decision Point #1.
+If Codex unavailable → skip with warning, proceed to next phase.
 
-**Decision Point #1:** present findings raw, ask A-E (see SKILL.md for format).
-After A or B → SuperPowers rewrites spec → `{session_dir}/03-spec-v2.md`.
-Do NOT auto-resubmit to Codex — user controls via option D.
+**Auto-Integration (replaces old Decision Point #1):**
+
+Apply the same 3-gate rule as Phase 9 Step 5, adapted for spec content:
+1. **Concrete revision available** — reviewer identified specific section + what it should say (not vague "consider X").
+2. **Not a design pivot** — reviewer flagged an inconsistency, missing edge case, or infeasibility (factual). Semantic design alternatives ("approach A vs B") do NOT auto-apply — escalate.
+3. **No contradictions** — if two reviewer findings contradict each other at the same section, skip both, log `[CONFLICT]`.
+
+Apply qualifying findings, rewrite spec → `{session_dir}/03-spec-v2.md`.
+
+**Escalation** (terminal, not GitHub) only when:
+- Reviewer finds a design pivot (approach A vs B) — user must choose
+- Two findings contradict at the same section
+- Iteration cap (2) hit with remaining critical findings
+
+Log: `[timestamp] Phase 2 auto-integrate: {N} applied, {S} skipped, {E} escalated`.
 
 ## Phase 3: Plan — `superpowers:writing-plans`
 
@@ -36,13 +48,18 @@ pre-written commit messages.
 **Output:** plan in `docs/superpowers/plans/YYYY-MM-DD-*.md` →
 `{session_dir}/04-plan.md`.
 
-## Phase 4: Codex Review Plan
+## Phase 4: Codex Review Plan (Auto-Integrate)
 
 Invoke `codex-review` with `review_type: plan`, `input_file: 04-plan.md`,
 `output_file: 05-codex-review-plan.md`, `spec_path: <approved spec>`.
 
-**Decision Point #2:** same A-E format.
-After correction → `{session_dir}/06-plan-v2.md`.
+**Auto-Integration (replaces old Decision Point #2):** same 3-gate rule
+as Phase 2 (concrete revision + factual fix + no contradictions). Apply
+qualifying findings, rewrite plan → `{session_dir}/06-plan-v2.md`.
+
+**Escalation** only when the reviewer flags a circular task dependency
+that the LLM rewrite can't resolve, a spec-plan mismatch requiring spec
+edits, or the iteration cap (2) is hit. Log same format as Phase 2.
 
 ## Phase 4.5: Task DAG + Sub-Agent Briefs
 
@@ -116,28 +133,45 @@ returns BLOCKED on Sonnet due to reasoning issue, re-dispatch with Opus.
 
 Record `base_ref` (SHA before execution) and `commit_list` (all new commits).
 
-## Phase 6: Codex Review Implementation
+## Phase 6: Codex Review Implementation (Auto-Integrate)
 
 Invoke `codex-review` with `review_type: impl`, `base_ref`, `commit_list`,
 output `07-codex-review-impl.md`.
 
-**Decision Point #3:** A-E format. A/B corrections create new commits.
+**Auto-Integration (replaces old Decision Point #3):** same 3-gate rule
+as Phase 9 (concrete patch + non-critical domain + no cross-finding
+conflict). Apply qualifying fixes as new commits on the feature branch.
 
-## Phase 6.5: CodeRabbit Review (NEW)
+Commit format:
+```
+fix(phase-6): auto-apply Codex findings ({N} fixes)
 
-Invoke `coderabbit-review` skill with:
+- file:line — description
+- ...
+
+Skipped (judgment-only or critical domain):
+- file:line — reason
+```
+
+**Escalation** only when the iteration cap (3) is hit with remaining
+`critical` or `high` findings, or a finding lands in auth / payments /
+data migration and needs human judgment.
+
+## Phase 6.5: CodeRabbit Review (opt-in when Phase 9 runs, Auto-Integrate)
+
+When enabled (either `--coderabbit-cli` flag, `maturity=ship`, or App not
+installed on repo), invoke `coderabbit-review` skill with:
 - `session_dir`: current session dir
 - `output_file`: `{session_dir}/07b-coderabbit-review-impl.md`
 - `base_ref`: git SHA from Phase 5
 
 If CodeRabbit CLI unavailable → skip with warning.
 
-**Decision Point #3b:** same A-E format as #3, but applied to CodeRabbit
-findings. Complements Codex (architectural) with static-analysis grounding
-(lint, security, style, nits).
+**Auto-Integration (replaces old Decision Point #3b):** same 3-gate rule.
 
-If both Codex AND CodeRabbit flag the same file:line → mark `[CONSENSUS]`
-and escalate severity to the higher of the two.
+If both Codex AND CodeRabbit flag the same file:line → mark `[CONSENSUS]`,
+escalate severity to the higher of the two, and apply (higher evidence
+weight → worth applying even on lower-confidence standalone findings).
 
 ## Phase 7: Verify — `superpowers:verification-before-completion`
 

@@ -149,7 +149,14 @@ You experience this as a natural conversation. CLoClo orchestrates the phases, i
            Artifact: 10-pr-bot-digest.md + merged PR
 ```
 
-**Only the three A-E decision points (#1 spec, #2 plan, #3 impl) require your input.** Everything else is automatic — including the PR opening, multi-bot review, auto-fix loop, and merge.
+**Only Phase 1 (brainstorming) requires your input** — that's where design intent lives. Every review phase (2, 4, 6, 6.5, 9) auto-integrates findings under three guardrails and only escalates on genuine blockers. You stay in the terminal from spec approval to merged PR.
+
+**The three auto-apply gates** (identical for spec edits, plan edits, code fixes, and PR bot findings):
+1. Reviewer provides a concrete revision or patch — not just "consider X"
+2. Not a design pivot (approach A vs B on spec) and not in auth/payments/data-migration
+3. No contradictions between reviewers or findings at the same location
+
+**Escalation** happens in the terminal only, never on GitHub. Triggers: design pivot, critical-domain touch, cross-reviewer conflict, iteration cap hit, or patch apply failed. Answer one question and the loop resumes.
 
 ### You commit code
 
