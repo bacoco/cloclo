@@ -319,6 +319,8 @@ Since 0.5.0, the pipeline ends by opening a **Pull Request** instead of merging 
 
 **Default stack** = CodeRabbit + Gemini. Two angles, both zero-config after install, both post reviews directly on the PR. Adding Codex Cloud or Claude Code Action is an explicit opt-in per repo.
 
+**Why Codex Cloud is opt-in (not default).** Phases 2, 4, and 6 already invoke Codex on the spec, plan, and implementation — three independent Codex passes against the same code before the PR opens. Polling the Codex Cloud GitHub bot on the PR duplicates that work, consumes extra quota, and surfaces near-identical findings in different words, which creates noise in the auto-integration loop. Enable it only when the repo has external contributors whose code did not pass through CLoClo's own Codex gates, or set `bots.codex_cloud: true` in `pipeline.config.md` for a permanent per-repo opt-in. The per-session form is `/pipeline avec codex cloud`.
+
 **Direct merges to main** are reserved for trivial out-of-pipeline changes (typos, config one-liners). Anything substantive goes through a PR. Phase 9 is skipped only on `maturity: spike` (prototyping) or when there's no git remote configured.
 
 **Phase 6.5 CodeRabbit CLI becomes opt-in** when Phase 9 runs (the GitHub App will review the PR anyway). Enable 6.5 explicitly on `ship` maturity for defense-in-depth, or when the App is not installed on the repo.
