@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "CLoClo — Code Loop Orchestrator: Claude + Codex + CodeRabbit + Gemini + Codex-Cloud on PR. Dev pipeline + project bootstrap + LLM wiki + behavioral patterns for Claude Code.",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "plugins": [
     {
       "name": "cloclo",
       "description": "Dev pipeline (Claude+Codex+CodeRabbit+Gemini+Codex-Cloud reviews on PR) + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki (persistent knowledge base) + behavioral patterns.",
-      "version": "0.5.0",
+      "version": "0.5.1",
       "author": {
         "name": "Loic Baconnier"
       },
