@@ -31,12 +31,8 @@ The calling skill (typically `pipeline`) passes:
 ### Prerequisites
 
 ```bash
-# Check Codex CLI
+# Only the Codex CLI is required — the codex-companion.mjs wrapper is no longer used.
 command -v codex &>/dev/null || CODEX_UNAVAILABLE=1
-
-# Find companion script
-CODEX_COMPANION_PATH="${CODEX_COMPANION_PATH:-$(find ~/.claude/plugins -name codex-companion.mjs -path '*/codex/scripts/*' 2>/dev/null | head -1)}"
-[ -z "$CODEX_COMPANION_PATH" ] && CODEX_UNAVAILABLE=1
 
 # Auth is managed by Codex CLI internally — do NOT check codex whoami or OPENAI_API_KEY
 ```
@@ -50,29 +46,50 @@ CODEX_COMPANION_PATH="${CODEX_COMPANION_PATH:-$(find ~/.claude/plugins -name cod
 ### Execution (FOREGROUND)
 
 ```bash
-node "$CODEX_COMPANION_PATH" task --write --prompt-file /tmp/cloclo-codex-prompt-{timestamp}.md
+echo "Codex is reviewing (read-only sandbox)... output -> $output_file"
+
+codex exec \
+  -s read-only \
+  -o "$output_file" \
+  "$(cat "$PROMPT_FILE")" \
+  > /dev/null 2>&1
+CODEX_EXIT=$?
+
+rm -f "$PROMPT_FILE"
 ```
 
-- Print: "Codex is reviewing... (this takes 2-10 minutes)"
-- Block until exit
-- Delete temp prompt after completion
+**Pattern** : native `codex exec` (no wrapper). Matches the interactive `codex` terminal experience, minus the per-tool approval prompts.
+
+- `codex exec` — non-interactive one-shot session. Same tools, same working-directory rooting as an interactive `codex` run.
+- `-s read-only` — **OS-level sandbox**. Codex has FULL READ access to the entire repo (every source file, git history, CLAUDE.md, everything). Writes are blocked at the kernel level — Codex physically cannot modify any file in the project, even if the prompt told it to. Belt + suspenders with the prompt template's "don't modify code" instruction.
+- `-o "$output_file"` — the final agent message is captured directly into the review file. No stdout pollution, no tool call needed; Codex's native output flag handles it.
+- `> /dev/null 2>&1` — stdout and stderr discarded. Only `$output_file` matters.
+- Block until exit. Delete temp prompt after.
+
+### Why this approach over `codex-companion.mjs task --write`
+
+| Aspect | `codex exec -s read-only -o` (this version) | `node codex-companion.mjs task --write` (old) |
+|---|---|---|
+| Wrapper | None (native CLI) | 63-import node wrapper |
+| Read-only enforcement | Kernel syscall sandbox | Relied on prompt instruction |
+| Output capture | `-o` flag, guaranteed | Depended on Codex calling its write tool |
+| Coupling | OpenAI's stable public CLI | Script path hardcoded, breaks if OpenAI refactors |
+| Stdout pollution | None | JSONL events + progress lines |
+
+Past behaviour: Codex occasionally completed exploration without calling its write tool → empty output file despite exit=0. `-o` removes that failure mode entirely — the final agent message is captured whether or not the model thinks to emit it as a tool call.
 
 ### Result Check (strict — mandatory post-run guard)
 
-After the companion exits, run this check explicitly:
-
 ```bash
-if [ -s "$output_file" ]; then
-  # file exists AND non-empty → Codex succeeded
+if [ $CODEX_EXIT -eq 0 ] && [ -s "$output_file" ]; then
   echo "[codex-review] OK: $output_file"
 else
-  # file missing, empty, OR zero-byte → Codex silently failed despite exit=$?
-  echo "[codex-review] FAIL: $output_file missing or empty. Falling back to Claude." >&2
+  echo "[codex-review] FAIL: exit=$CODEX_EXIT, file empty or missing. Falling back to Claude." >&2
   # fall through to Claude fallback (section 3)
 fi
 ```
 
-**Why this is a dedicated guard** : the prompt template ends with a "RAPPEL FINAL AVANT DE CONCLURE" block demanding the write, but frontier models occasionally still skip the write tool call after extensive exploration. The `[ -s "$output_file" ]` check is the safety net — never trust the exit code alone.
+**Why still a guard** : `-o` handles the "Codex forgot to write" case at the CLI level, but can't cover infra failures (auth expired mid-session, quota hit, network cut). The `[ -s "$output_file" ]` check catches both cleanly.
 
 Log to `session.log` either way.
 

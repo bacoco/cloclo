@@ -24,19 +24,27 @@ If NOT found:
 - If fails: `"Install manually: npm install -g @openai/codex"`
 - Confirm with `codex --version`
 
-## Step 3: Codex Claude Code Plugin
+## Step 3: Codex Claude Code Plugin (optional since 0.8.0)
+
+Since 0.8.0, `codex-review` invokes `codex exec -s read-only -o` directly — the
+native CLI, no wrapper. The `codex-companion.mjs` script from the Codex Claude
+Code plugin is NOT required.
+
+If the user still wants the plugin installed (for `codex:rescue` or other plugin
+skills), the check is informational only, not blocking:
 
 ```bash
 find ~/.claude/plugins -name codex-companion.mjs -path '*/codex/scripts/*' 2>/dev/null | head -1
 ```
 
-If companion NOT found:
+If not installed and the user asks to install:
 1. Read `~/.claude/settings.json`
 2. Add `"codex@openai-codex": true` to `enabledPlugins`
 3. Add `"openai-codex": {"source": {"source": "github", "repo": "openai/codex-plugin-cc"}}` to `extraKnownMarketplaces`
 4. Write back `settings.json`
-5. Tell user to restart and re-run `/pipeline`
-6. **STOP.** Restart required.
+5. Tell user to restart for the plugin to load.
+
+**Do not block the pipeline on this step** — the CLI check in Step 2 is sufficient.
 
 Codex CLI manages its own auth — do NOT check `codex whoami` (requires TTY)
 or `OPENAI_API_KEY` (unused by Codex CLI).

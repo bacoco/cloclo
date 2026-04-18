@@ -249,9 +249,36 @@ The wiki builds up automatically from pipeline sessions and commits. You never o
 
 ### Codex reviews (independent verification)
 
-[Codex](https://github.com/openai/codex-plugin-cc) freely explores your codebase (30-80+ files) and verifies that specs, plans, and code actually match reality. It catches things Claude missed. You see the findings and decide what to do — integrate, ignore, or dig deeper.
+Codex freely explores your codebase (30-80+ files) under an **OS-level read-only sandbox** (`codex exec -s read-only`) — it reads everything (source files, git history, CLAUDE.md, tests, configs) but cannot modify anything. Writes are blocked at the kernel level, so even a rogue prompt can't cause damage. Reviews verify that specs, plans, and code actually match reality. It catches things Claude missed.
+
+The final agent message is captured directly to a markdown file via the `-o` flag. Stdout is discarded — the review file is the single contract. You see the findings and decide what to do — integrate, ignore, or dig deeper.
+
+**Invocation (native CLI, no wrapper)**:
+
+```bash
+# What cloclo-codex-review runs under the hood
+codex exec -s read-only -o "$output_file" "$(cat "$prompt_file")" > /dev/null 2>&1
+```
+
+This matches the behavior of an interactive `codex` terminal session, minus the per-tool approval prompts. Same tools (`read_file`, `list_files`, `grep`, bash in read-only mode, git inspection), same working directory rooting — just autonomous.
 
 If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls back to a Claude subagent for reviews. Less independent than Codex (same model family), but still catches real bugs because the reviewer has fresh context. Reviews are never skipped entirely.
+
+### GLM-5.1 reviews (parallel second opinion)
+
+`glm-review` runs GLM-5.1 via Zhipu AI's Anthropic-compatible endpoint, in parallel with Codex during every review phase. It uses the already-installed `claude` CLI in a child process with three env vars overridden so the HTTP calls land on `api.z.ai/api/anthropic` instead of Anthropic:
+
+```bash
+ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
+ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
+ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
+ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
+claude -p --permission-mode acceptEdits "$(cat "$prompt_file")"
+```
+
+The parent Claude Code session keeps its real Anthropic auth untouched — env vars are scoped to the single `claude -p` subprocess. GLM writes its review directly to the output file via the Write tool (auto-approved by `acceptEdits`) — same file contract as Codex, different mechanism.
+
+**No fallback** for GLM: if the key is missing or the API fails, the phase runs with Codex alone. Codex covers the independent-voice requirement.
 
 **Adversarial triple-perspective:** After every review, three mandatory failure-seeking perspectives run — Skeptic ("which assumption is wrong?"), Devil's Advocate ("how could this fail?"), Edge-Case Hunter ("what input causes silent failure?"). Prevents rubber-stamp PASS verdicts.
 
