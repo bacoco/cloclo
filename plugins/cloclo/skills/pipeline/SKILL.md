@@ -95,6 +95,85 @@ enabling per project, not per pipeline run.
    ```
 4. Optional: `pipeline.config.md` for project-specific verification commands
 
+## Smart-Resume Entry Point Detection
+
+Before running Phase 1, the pipeline detects which artifacts already exist
+and either skips the corresponding phase silently, asks once, or jumps
+straight to the first unfinished phase — depending on flags.
+
+**Detection map:**
+
+| Artifact found | Means | Effect |
+|----------------|-------|--------|
+| `{session_dir}/01-spec.md` (or `03-spec-v2.md`) | Phase 1 already done | Skip Phase 1, reuse spec |
+| `{session_dir}/02-codex-review-spec.md` | Phase 2 already done | Skip Phase 2 |
+| `{session_dir}/04-plan.md` (or `06-plan-v2.md`) | Phase 3 already done | Skip Phase 3 |
+| `{session_dir}/05-codex-review-plan.md` | Phase 4 already done | Skip Phase 4 |
+| `{session_dir}/task-briefs/` has files | Phase 4.5 already done | Skip Phase 4.5 |
+| Feature branch exists with commits ahead of main | Phase 5 already done (or partial) | Skip Phase 5 OR resume unfinished tasks |
+| `{session_dir}/07-codex-review-impl.md` recent | Phase 6 already done | Skip Phase 6 |
+| `{session_dir}/07b-coderabbit-review-impl.md` | Phase 6.5 already done | Skip Phase 6.5 |
+| `{session_dir}/09-compliance-report.md` | Phase 7 already done | Skip Phase 7 |
+| Open PR exists for the branch | Phase 9 already done (or partial) | Resume at bot-review loop |
+
+**Mode flags:**
+
+| Flag | Behavior |
+|------|----------|
+| *(none)* | Fresh run. Phase 1 is interactive. Subsequent phases auto-integrate. |
+| `--resume` | Detect existing artifacts. Ask once: "Trouvé X, Y, Z déjà faits. Quoi faire ?" → `[skip-all / redo-all / skip-some]`. |
+| `--skip-existing` | Auto-skip every phase whose artifact exists. No questions. |
+| `--from-phase=<N>` | Force start at phase N, skip everything before. Useful for `/pipeline --from-phase=6` to jump straight to review+verify+PR on existing code. |
+| `--findings-only` | Alias for `--from-phase=6`. Skip design/plan/execute; read existing review files (if any) OR run Phase 6/6.5 fresh on current branch; then Phase 7, 9. |
+| `--interactive-pr` | Force the A-E escape hatch at Phase 9 for this run. |
+| `--no-pr` | Skip Phase 9 (direct merge to main, or leave changes uncommitted). |
+
+**Detection flow:**
+
+```
+/pipeline --skip-existing
+  ↓
+For each artifact in the map (spec → plan → commits → reviews):
+  if exists → log skip, continue
+  if missing → run that phase
+  ↓
+Land at the first phase whose artifact is missing → execute from there
+```
+
+**Ask-once mode (`--resume`):**
+
+```
+Session "2026-04-18-n10-fixes" a deja :
+  ✓ Phase 1 spec    (01-spec.md)
+  ✓ Phase 3 plan    (04-plan.md)
+  ✓ Phase 5 commits (branch feat/n10-fixes, 7 commits ahead of main)
+
+Phases manquantes : 2, 4, 6, 6.5, 7, 7.5, 8, 9
+
+Quoi faire ?
+A. Skip ce qui est fait, continuer aux phases manquantes
+B. Tout refaire from Phase 1 (ecrase les artifacts existants)
+C. Jumper a une phase precise (tape le numero)
+D. Run --findings-only (skip vers Phase 6)
+```
+
+Default when the user gives no flag and artifacts exist: option A.
+
+## Branch Lifecycle
+
+Phase 5 creates a feature branch (`pipeline/<slug>` or user-provided name).
+Phase 9 opens a PR on that branch. When auto-merge succeeds, the branch is
+**deleted** (`gh pr merge --squash --delete-branch --auto`) — both locally
+and on the remote. Log line:
+
+```
+[timestamp] Phase 9 merged + branch deleted: pipeline/<slug> → main
+```
+
+If merge is escalated instead (iteration cap, patch failed, CI blocked),
+the branch stays alive so the user can push manual fixes. Branch deletion
+happens only on the successful auto-merge path.
+
 ## Auto-Integration (all review phases)
 
 Review phases 2, 4, 6, 6.5, and 9 all use the SAME auto-integration

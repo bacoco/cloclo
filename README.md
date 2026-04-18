@@ -158,6 +158,22 @@ You experience this as a natural conversation. CLoClo orchestrates the phases, i
 
 **Escalation** happens in the terminal only, never on GitHub. Triggers: design pivot, critical-domain touch, cross-reviewer conflict, iteration cap hit, or patch apply failed. Answer one question and the loop resumes.
 
+### Smart-resume — re-entering a session mid-pipeline
+
+If a session already has a spec, plan, or commits (you started it earlier, or someone else did), the pipeline detects the existing artifacts and either skips the matching phases automatically or asks you once what to do. You never redo work you've already done.
+
+| Mode | Behavior |
+|------|----------|
+| `/pipeline` (no flag) | Fresh run. Full 9 phases from Phase 1. |
+| `/pipeline --resume` | Detect existing artifacts. One terminal question → skip-done / redo-all / jump-to-phase. |
+| `/pipeline --skip-existing` | Auto-skip every phase whose artifact exists. No questions asked. |
+| `/pipeline --from-phase=6` | Force start at phase 6 (review+verify+PR on existing commits). |
+| `/pipeline --findings-only` | Alias for `--from-phase=6`. Useful when code is already written and you just want the review/verify/PR loop. |
+| `/pipeline --interactive-pr` | Restore the old A-E decision at Phase 9 for this run. |
+| `/pipeline --no-pr` | Skip Phase 9 entirely. |
+
+After a successful auto-merge, the feature branch is deleted both locally and on the remote (`gh pr merge --squash --delete-branch --auto`). If the merge escalates instead, the branch stays alive so you can push manual fixes.
+
 ### You commit code
 
 CLoClo notices. If the change was significant, it silently updates wiki pages — new components get entity pages, architecture decisions become concept pages, patterns get documented.
