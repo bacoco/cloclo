@@ -57,11 +57,22 @@ node "$CODEX_COMPANION_PATH" task --write --prompt-file /tmp/cloclo-codex-prompt
 - Block until exit
 - Delete temp prompt after completion
 
-### Result Check
+### Result Check (strict — mandatory post-run guard)
 
-If `output_file` exists and is non-empty → **Codex succeeded**. Return raw content.
+After the companion exits, run this check explicitly:
 
-If Codex failed (exit code non-zero, output empty, usage limit error) → **fall through to Claude fallback** (section 3).
+```bash
+if [ -s "$output_file" ]; then
+  # file exists AND non-empty → Codex succeeded
+  echo "[codex-review] OK: $output_file"
+else
+  # file missing, empty, OR zero-byte → Codex silently failed despite exit=$?
+  echo "[codex-review] FAIL: $output_file missing or empty. Falling back to Claude." >&2
+  # fall through to Claude fallback (section 3)
+fi
+```
+
+**Why this is a dedicated guard** : the prompt template ends with a "RAPPEL FINAL AVANT DE CONCLURE" block demanding the write, but frontier models occasionally still skip the write tool call after extensive exploration. The `[ -s "$output_file" ]` check is the safety net — never trust the exit code alone.
 
 Log to `session.log` either way.
 
