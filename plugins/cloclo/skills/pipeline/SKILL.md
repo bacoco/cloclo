@@ -287,17 +287,66 @@ When reviewers disagree (Codex flags P2, CodeRabbit flags P0 or vice-versa):
 - If severity spread > 1 level AND the higher is `critical` → escalate
 - Otherwise apply the higher-severity fix and log the disagreement
 
-## Dual-Reviewer Consensus (Phase 6 + 6.5)
+## Confidence-First Principle (applies to every phase)
 
-When BOTH Codex (architecture) AND CodeRabbit (static analysis) flag the
-same file:line:
-- Mark `[CONSENSUS]` — high-confidence finding
-- Escalate severity to the higher of the two
-- Present consensus findings FIRST in Decision Point #3b
+**Autonomous does not mean guessing.** Every decision the pipeline makes
+— whether to apply a finding, skip it, pick an interpretation of a
+directive, choose a default — must pass a confidence check.
 
-When reviewers disagree (Codex flags P2, CodeRabbit flags P0 or vice-versa):
-- Mark `[DISAGREEMENT]`
-- Surface both opinions explicitly — do not hide the split in an average
+```dot
+digraph confidence_check {
+  "about to act on a decision" [shape=doublecircle];
+  "confident >= 95%?" [shape=diamond];
+  "act autonomously" [shape=box];
+  "ask user with clear options" [shape=box];
+  "log decision + continue" [shape=doublecircle];
+
+  "about to act on a decision" -> "confident >= 95%?";
+  "confident >= 95%?" -> "act autonomously" [label="yes"];
+  "confident >= 95%?" -> "ask user with clear options" [label="no"];
+  "act autonomously" -> "log decision + continue";
+  "ask user with clear options" -> "log decision + continue";
+}
+```
+
+**When to ask (non-exhaustive):**
+
+- Two valid interpretations of a user directive and the intents differ
+  meaningfully
+- A reviewer finding that looks correct but touches code the pipeline
+  didn't write (outside the current change scope)
+- A test failure in Phase 7 that could be a regression OR a flake
+- A CI job red that might be a transient infra issue OR a real break
+- Any situation where "I think X but could be Y" applies
+
+**Ask format — always the same structure:**
+
+```
+{Question en une phrase}
+
+Contexte : {1-2 lignes expliquant pourquoi la question se pose}
+
+Options :
+A. {option 1 concrete}                                    ← recommandee
+B. {option 2}
+C. {option 3 si pertinent}
+
+Ou tape ta reponse en texte libre.
+```
+
+- Give 2-3 concrete options (not open-ended)
+- Mark the recommended option when there is one
+- Allow free-form response as escape hatch
+- Questions are ALWAYS in the terminal, NEVER on GitHub
+
+**Do NOT ask when:**
+
+- The answer is already in `pipeline.config.md` or existing artifacts
+- The user's CLAUDE.md/memory answers it unambiguously
+- The decision is reversible and low-impact (apply then let the user
+  correct on next iteration)
+
+Don't ask trivial questions, don't guess on hard ones.
 
 ## Prerequisites
 
@@ -332,9 +381,12 @@ at end of every run for session resume. Full structure:
 ## Important Rules
 
 1. **Do NOT reimplement SuperPowers, Codex, or CodeRabbit skills.** Invoke them.
-2. **Phase 1 (brainstorming) is the ONLY interactive phase by default.** All
-   review phases (2, 4, 6, 6.5, 9) auto-integrate findings under the
-   3-gate rule and only escalate on blockers. User stays in terminal.
+2. **Phase 1 (brainstorming) is the ONLY scheduled interactive phase.** Every
+   other phase auto-integrates findings under the 3-gate rule. BUT the
+   Confidence-First Principle (see section above) applies universally: if
+   confidence on any decision drops below 95%, ASK the user with clear
+   options instead of guessing. Questions happen in the terminal, never
+   on GitHub.
 3. **All reviews are FOREGROUND.** Claude waits, shows progress, reads the result.
 4. **Free-form user input** is valid at any escalation point — treat as comment and adapt.
 5. **Each phase outputs to session dir** with numbered filenames for traceability.

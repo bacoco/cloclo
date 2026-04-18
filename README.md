@@ -158,6 +158,8 @@ You experience this as a natural conversation. CLoClo orchestrates the phases, i
 
 **Escalation** happens in the terminal only, never on GitHub. Triggers: design pivot, critical-domain touch, cross-reviewer conflict, iteration cap hit, or patch apply failed. Answer one question and the loop resumes.
 
+**Confidence-first principle** applies everywhere, not just at scheduled escalation points. If the pipeline's confidence on any decision drops below 95% — ambiguous directive, reviewer finding touching out-of-scope code, test failure that could be regression or flake, CI red that could be infra — it asks you with 2-3 concrete options (recommended one marked). Autonomous means applying clear things under gates, not guessing on unclear ones. Free-form text responses are always accepted.
+
 ### Smart-resume — re-entering a session mid-pipeline
 
 `/pipeline` takes **no flags**. Two ways to resume:
