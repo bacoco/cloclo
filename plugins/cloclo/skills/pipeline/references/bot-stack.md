@@ -20,6 +20,36 @@ diff. The default stack is two bots; extras are opt-in.
 Default stack = **CodeRabbit + Gemini**. Two angles, both zero-config
 after install.
 
+### Why Codex Cloud is opt-in (not default)
+
+Phases 2, 4, and 6 already invoke `codex-review` against the spec, plan,
+and implementation. That is three independent Codex passes against the
+same code before Phase 9 even opens the PR. Polling
+`chatgpt-codex-connector[bot]` on the PR:
+
+- Consumes Codex quota for a review that largely duplicates Phase 6.
+- Surfaces near-identical findings in different words, which creates
+  noise and false "new finding" signals in the auto-integration loop.
+- Adds 5-10 minutes per iteration waiting for Codex Cloud to finish.
+
+If a user genuinely wants an independent Codex double-check on the PR
+(for example, because the repo has external contributors whose code did
+not go through Phases 2/4/6), they can enable the opt-in. The directive
+`/pipeline avec codex cloud` (see `smart-resume.md`) adds Codex Cloud to
+the Phase 9 wait-set for a single session. Permanent enablement happens
+in `pipeline.config.md`:
+
+```yaml
+bots:
+  codex_cloud: true
+```
+
+When Codex Cloud is opted in AND the GitHub App is installed on the
+repo, Phase 9 polls `chatgpt-codex-connector[bot]` alongside CodeRabbit
+and Gemini. Otherwise the bot login is simply absent from the regex
+match and the polling loop ignores it. No error, no warning — Codex
+Cloud is treated as optional by design.
+
 ## Consensus Amplification
 
 When BOTH Codex (architecture) AND CodeRabbit (static analysis) flag the

@@ -310,6 +310,15 @@ Default stack = CodeRabbit + Gemini (2 angles, both zero-config after install).
 Opt-in to Codex Cloud / Claude Action only when the extra perspective is worth
 the config overhead — they do NOT need to be on every PR by default.
 
+**Codex Cloud is specifically opt-in because Phase 6 already ran `codex-review`
+against the same commits.** Waiting for `chatgpt-codex-connector[bot]` on the
+PR re-reviews code that Codex has already inspected once, consuming quota and
+surfacing duplicated findings. The regex above still lists the bot so that
+users who opted in (via `/pipeline avec codex cloud` or the `bots.codex_cloud`
+flag in `pipeline.config.md`) see their output — if Codex Cloud is not opted
+in, the login simply never appears in the poll results and the loop ignores
+it. Full rationale and opt-in syntax: `bot-stack.md`.
+
 Wait until at least one bot has posted a comment OR 5 minutes have elapsed,
 whichever comes first.
 
