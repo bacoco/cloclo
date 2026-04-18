@@ -64,6 +64,93 @@ SuperPowers verifies ──► evidence (commands run, output shown)
 
 You experience this as a natural conversation. CLoClo orchestrates the phases, inserts Codex reviews at the right moments, and feeds everything into the wiki — without you ever typing a command.
 
+### The full pipeline — 9 phases end-to-end
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              /pipeline                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  PHASE 1  ► Design                          superpowers:brainstorming
+           │  One question at a time, HTML mockups, A/B/C options,
+           │  spec self-review, user approval gate
+           ▼
+           Artifact: 01-spec.md
+           │
+  PHASE 2  ► Codex Review (spec)             codex-review (spec)
+           │  Independent model reads spec, catches ambiguity,
+           │  missing edge cases, infeasibility
+           ▼
+           Artifact: 02-codex-review-spec.md → Decision #1 (A-E)
+           │
+  PHASE 3  ► Plan                            superpowers:writing-plans
+           │  Bite-sized tasks, TDD cycle, complete code blocks,
+           │  pre-written commit messages
+           ▼
+           Artifact: 04-plan.md
+           │
+  PHASE 4  ► Codex Review (plan)             codex-review (plan)
+           │  Verifies plan covers the spec, no circular deps,
+           │  code snippets compile against real types
+           ▼
+           Artifact: 05-codex-review-plan.md → Decision #2 (A-E)
+           │
+  PHASE 4.5 ► Task DAG + Briefs              inline
+           │  Dependency graph, file ownership matrix,
+           │  wave dispatch for parallel tasks
+           ▼
+           Artifacts: 08-task-dag.md, task-briefs/
+           │
+  PHASE 5  ► Execute                         superpowers:subagent-driven-development
+           │  Fresh subagent per task, two-stage review
+           │  (spec compliance → code quality), bounded retries
+           ▼
+           Output: commits on feature branch
+           │
+  PHASE 6  ► Codex Review (impl)             codex-review (impl)
+           │  Reads the diff, verifies impl matches spec,
+           │  adversarial triple-perspective pass
+           ▼
+           Artifact: 07-codex-review-impl.md → Decision #3 (A-E)
+           │
+  PHASE 6.5 ► CodeRabbit CLI (opt-in)        coderabbit-review
+           │  Local static analysis before push.
+           │  Skipped by default when Phase 9 runs
+           │  (the App reviews on the PR anyway).
+           ▼
+           Artifact: 07b-coderabbit-review-impl.md → Decision #3b
+           │
+  PHASE 7  ► Verify                          superpowers:verification-before-completion
+           │  Iron Law: NO completion claim without fresh evidence.
+           │  AC-level compliance report: every criterion mapped to test.
+           ▼
+           Artifact: 09-compliance-report.md
+           │
+  PHASE 7.5 ► Visual Verify (if UI)          agent-browser
+           │  Open each affected page, take screenshot,
+           │  read + verify every screenshot immediately
+           ▼
+           Artifacts: screenshots/*.png
+           │
+  PHASE 8  ► Wiki Ingest (auto)              inline
+           │  Session summary, new entity/concept pages,
+           │  architecture decisions, patterns + fixes
+           ▼
+           Artifact: wiki/sources/... + log entry
+           │
+  PHASE 9  ► Open PR + Multi-Bot Auto-Integrate  superpowers:finishing-a-development-branch
+           │  Open PR → wait 10 min → parse bot findings →
+           │  auto-apply concrete patches (3 gates) →
+           │  push → re-review → loop max 3× →
+           │  auto-merge when clean. User stays in terminal.
+           │  Escalation ONLY on: cap hit with criticals,
+           │  patch failed, CI blocked, P0 disagreement.
+           ▼
+           Artifact: 10-pr-bot-digest.md + merged PR
+```
+
+**Only the three A-E decision points (#1 spec, #2 plan, #3 impl) require your input.** Everything else is automatic — including the PR opening, multi-bot review, auto-fix loop, and merge.
+
 ### You commit code
 
 CLoClo notices. If the change was significant, it silently updates wiki pages — new components get entity pages, architecture decisions become concept pages, patterns get documented.
