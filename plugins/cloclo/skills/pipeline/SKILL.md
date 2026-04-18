@@ -115,11 +115,15 @@ session dir (and on the git branch) and adapts.
 | `{session_dir}/09-compliance-report.md` | Phase 7 already done | Reuse report |
 | Open PR exists for the branch | Phase 9 already started | Resume at bot-review loop |
 
-**Decision logic (no flags — everything is dialogue):**
+**Decision logic (no flags — dialogue OR natural-language directive):**
 
 1. Run detection. Build the list of existing artifacts.
-2. **If nothing exists** → run full pipeline from Phase 1. No prompt.
-3. **If artifacts exist** → ask ONE question in the terminal:
+2. **If the user passed free text after `/pipeline`** → interpret the text
+   as a directive and skip the dialogue entirely (see "Natural-Language
+   Directives" below).
+3. **If nothing exists and no directive** → run full pipeline from Phase 1.
+   No prompt.
+4. **If artifacts exist and no directive** → ask ONE question in the terminal:
 
 ```
 Session "{slug}" a deja :
@@ -148,7 +152,61 @@ the pipeline runs. No flags ever.
 
 No flags of any kind. If the user truly needs an exotic flow, they edit
 the session dir manually before re-running `/pipeline` — but 99% of runs
-are A/B/C answers.
+are A/B/C answers or natural-language directives.
+
+## Natural-Language Directives
+
+When the user invokes `/pipeline` with free text after the command name,
+**interpret the text as a directive** and skip the smart-resume dialogue.
+Parse the intent, map it to phases to skip/run, log the decision, and go.
+
+**Invocation pattern:**
+
+```
+/pipeline <directive in plain French or English>
+```
+
+**Interpretation map (non-exhaustive — use judgment for phrasings not
+listed):**
+
+| User says | Interpret as | Effect |
+|-----------|--------------|--------|
+| `passe au plan`, `jumpe au plan`, `start at plan`, `skip spec` | Skip Phases 1+2, start at Phase 3 | Use existing spec if any, else use user's initial message as spec input |
+| `passe a la review`, `review et merge`, `findings only`, `jump to review`, `le code est ecrit` | Start at Phase 6 | Existing commits on current branch are reviewed, verified, PR'd, merged |
+| `refais tout`, `from scratch`, `redo all`, `ecrase tout` | Start at Phase 1, overwrite existing artifacts | Wipe session dir (with backup to `.bak/`), full fresh run |
+| `continue`, `reprend`, `resume` | First missing phase | Equivalent of dialogue option A |
+| `skip codex`, `pas de codex`, `no codex review` | Skip Phases 2 + 4 + 6 | No Codex reviews in this run (CodeRabbit + Gemini on PR still run) |
+| `pas de PR`, `no PR`, `skip phase 9`, `direct merge` | Skip Phase 9 | Commits stay on feature branch or merge directly to main per user setup |
+| `spike mode`, `en prototype` | Set `maturity: spike` for this run | Soft gates, no Phase 9, fewer reviews |
+| `ship mode`, `production` | Set `maturity: ship` for this run | Hard gates, adversarial triple-perspective, all reviews |
+| `avec claude action`, `add claude action` | Enable Claude Code GitHub Action for Phase 9 | Opt-in bot stack includes Claude Action |
+| `with codex cloud`, `avec codex cloud` | Enable Codex Cloud for Phase 9 | Opt-in bot stack includes Codex Cloud |
+
+**Rules for parsing:**
+
+- **Liberal interpretation.** Accept synonyms, casual phrasing, mixed
+  French/English. If the intent is 80% clear, act on it. If truly
+  ambiguous, ask a single clarifying question.
+- **Log the interpretation.** Before acting, log to `session.log`:
+  ```
+  [timestamp] Directive received: "{user text}"
+  [timestamp] Interpreted as: start at Phase 6, skip Phases 1-5
+  ```
+- **User can override by re-running.** If the interpretation was wrong,
+  the user re-runs `/pipeline <clearer text>` and the pipeline adapts.
+- **Compositional directives.** Multiple hints combine naturally:
+  `/pipeline passe au plan, pas de codex` → start at Phase 3 AND skip
+  Phases 2+4+6.
+
+**Ambiguous phrasing** → ask ONE clarifying question (not a dialogue, just
+a direct yes/no):
+
+```
+User: /pipeline le spec est bizarre
+Pipeline: Tu veux refaire la spec (Phase 1) ou revoir avec Codex (Phase 2) ?
+```
+
+After one round of clarification, act. Never ask twice.
 
 ## Branch Lifecycle
 

@@ -160,7 +160,9 @@ You experience this as a natural conversation. CLoClo orchestrates the phases, i
 
 ### Smart-resume — re-entering a session mid-pipeline
 
-`/pipeline` takes **no flags**. If the session already has a spec, plan, or commits, the pipeline detects what's done and asks you ONE question in the terminal:
+`/pipeline` takes **no flags**. Two ways to resume:
+
+**1. Dialogue (default when you invoke bare):** the pipeline detects what's done and asks one terminal question.
 
 ```
 Session "{slug}" a deja :
@@ -174,7 +176,21 @@ B. Refais tout from Phase 1 (ecrase les artifacts existants)
 C. Jumpe a la phase de review (part de Phase 6)
 ```
 
-You hit Enter for A (continue), or type B / C. No flags to remember.
+Hit Enter for A, or type B / C.
+
+**2. Natural-language directive (write what you want after the command):** skip the dialogue by telling the pipeline directly.
+
+```
+/pipeline passe au plan                # skip Phases 1+2, start at Phase 3
+/pipeline le code est ecrit, revois    # start at Phase 6 (review+merge)
+/pipeline refais tout                  # wipe artifacts, fresh run
+/pipeline pas de codex                 # skip Phases 2+4+6 (Codex reviews)
+/pipeline pas de PR                    # skip Phase 9
+/pipeline ship mode                    # maturity=ship (hard gates, adversarial)
+/pipeline passe au plan, pas de codex  # compositional: combine multiple
+```
+
+The pipeline interprets French, English, or mixed phrasing. If it's 80% clear, it acts. If truly ambiguous, one clarifying question, then go.
 
 **C is the common case** when code is already written and you just want the review → verify → PR → auto-merge loop. It skips design/plan/execute, runs review + verify on current commits, opens a PR, lets bots review, auto-applies their fixes, merges, deletes the branch.
 
