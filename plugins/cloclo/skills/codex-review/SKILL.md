@@ -1,6 +1,6 @@
 ---
 name: codex-review
-description: "Review a spec, plan, or implementation — first tries Codex (GPT-5.4), falls back to Claude subagent if unavailable. Writes findings to a file. Foreground execution."
+description: "Review a spec, plan, or implementation — first tries Codex (modèle CLI par défaut, actuellement GPT-5.5), falls back to Claude subagent if unavailable. Writes findings to a file. Foreground execution."
 user-invocable: false
 ---
 

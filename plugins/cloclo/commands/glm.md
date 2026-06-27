@@ -1,12 +1,12 @@
 ---
-description: Run a GLM-5.1 code review on current changes via Z.ai Anthropic-compatible endpoint. Standalone, outside the /pipeline flow.
+description: Run a GLM-5.2 code review on current changes via Z.ai Anthropic-compatible endpoint. Standalone, outside the /pipeline flow.
 argument-hint: "[committed|uncommitted|all] [base-ref]"
 allowed-tools: Bash(claude *), Bash(git *), Bash(grep *), Read, Write
 ---
 
-# /glm — Standalone GLM-5.1 Review
+# /glm — Standalone GLM-5.2 Review
 
-Run a GLM-5.1 review on the current repo. Uses the installed `claude` CLI with
+Run a GLM-5.2 review on the current repo. Uses the installed `claude` CLI with
 three environment variables overridden so the calls land on Z.ai instead of
 Anthropic. Useful before opening a PR, after a quick fix, or to sanity-check
 work without entering the full pipeline.
@@ -93,11 +93,11 @@ Examples:
 6. **Invoke `claude` with GLM env vars** (foreground, 2-8 min):
 
    ```bash
-   echo "GLM-5.1 is reviewing... (this takes 2-8 minutes)"
+   echo "GLM-5.2 is reviewing... (this takes 2-8 minutes)"
    ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
    ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
-   ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
-   ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
+   ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
+   ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
    claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")"
    rm -f "$PROMPT_FILE"
    ```

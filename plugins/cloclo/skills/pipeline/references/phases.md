@@ -19,13 +19,13 @@ Copy or symlink to `{session_dir}/01-spec.md`.
 Two independent reviewers run simultaneously. Each sees the same spec, writes to its
 own output file, and the calling skill merges their findings via the consensus matrix.
 
-**Codex (primary, GPT-5.4):**
+**Codex (primary, GPT-5.5):**
 - Invoke `codex-review` skill with:
   - `review_type`: `spec`
   - `input_file`: `{session_dir}/01-spec.md`
   - `output_file`: `{session_dir}/02-codex-review-spec.md`
 
-**GLM-5.1 (parallel, via Z.ai Anthropic-compatible endpoint):**
+**GLM-5.2 (parallel, via Z.ai Anthropic-compatible endpoint):**
 - Invoke `glm-review` skill with the same parameters but:
   - `output_file`: `{session_dir}/02-glm-review-spec.md`
 

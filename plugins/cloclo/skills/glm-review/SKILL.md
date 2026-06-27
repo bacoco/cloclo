@@ -1,12 +1,12 @@
 ---
 name: glm-review
-description: "Review a spec, plan, or implementation using GLM-5.1 via Z.ai's Anthropic-compatible endpoint. Runs `claude -p` with GLM env vars in a child process. No fallback — if the API key is missing or the call fails, the review is skipped (the calling skill proceeds without GLM). Writes findings to a file. Foreground execution."
+description: "Review a spec, plan, or implementation using GLM-5.2 via Z.ai's Anthropic-compatible endpoint. Runs `claude -p` with GLM env vars in a child process. No fallback — if the API key is missing or the call fails, the review is skipped (the calling skill proceeds without GLM). Writes findings to a file. Foreground execution."
 user-invocable: false
 ---
 
 # glm-review
 
-Review a spec, plan, or implementation using Zhipu AI's **GLM-5.1** model via the
+Review a spec, plan, or implementation using Zhipu AI's **GLM-5.2** model via the
 `api.z.ai/api/anthropic` Anthropic-compatible endpoint. Runs the already-installed
 `claude` CLI in a child process with three environment variables overridden so the
 tool calls land on Z.ai instead of Anthropic.
@@ -91,7 +91,7 @@ TS=$(date +%s)
 PROMPT_FILE="/tmp/cloclo-glm-prompt-${TS}.md"
 # ... resolved template written to PROMPT_FILE above ...
 
-echo "GLM-5.1 is reviewing... (this takes 2-8 minutes). Output: $output_file"
+echo "GLM-5.2 is reviewing... (this takes 2-8 minutes). Output: $output_file"
 
 # Pre-clear stale review file — prevents the post-run guard from accepting
 # an old file as success when GLM silently skips the Write call.
@@ -101,8 +101,8 @@ rm -f "$output_file"
 # is the review content (written by GLM via Write tool).
 ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
 ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
-ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
-ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
+ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
+ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
 claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")" \
   > "${output_file}.runtime.log" 2>&1
 GLM_EXIT=$?
@@ -119,7 +119,7 @@ the output_file after the call" — regardless of which reviewer produced it.
 
 - `ANTHROPIC_BASE_URL` redirects the CLI's HTTP calls to Z.ai's anthropic-compatible endpoint.
 - `ANTHROPIC_AUTH_TOKEN` is sent as the `x-api-key` / `authorization` header — Z.ai accepts its own key in that slot.
-- `ANTHROPIC_DEFAULT_OPUS_MODEL` forces the model ID to `glm-5.1` regardless of which Claude alias the CLI requests internally. Setting `SONNET_MODEL` too catches the case where the CLI upgrades/downgrades model aliases mid-session.
+- `ANTHROPIC_DEFAULT_OPUS_MODEL` forces the model ID to `glm-5.2` regardless of which Claude alias the CLI requests internally. Setting `SONNET_MODEL` too catches the case where the CLI upgrades/downgrades model aliases mid-session.
 - **Only the child process inherits these vars.** The parent Claude Code session (the one running cloclo) keeps its real Anthropic auth untouched. Codex CLI, CodeRabbit CLI, and any other tooling are unaffected.
 
 ### Result Check (strict — mandatory post-run guard)
@@ -203,5 +203,5 @@ In `dev` maturity, skip the adversarial pass for GLM (Codex's adversarial is eno
 - **Foreground only.** The pipeline itself runs glm-review in a background job for parallelism, but the skill's internal `claude -p` call is always foreground. No polling, no daemons.
 - **Clean up `/tmp` prompt files.** Same as codex-review.
 - **Open bar quota.** Unlike Anthropic Claude or Codex, the user has unlimited z.ai access. It is OK to re-run glm-review multiple times in a single pipeline (e.g., adversarial pass, post-merge review, ad-hoc `/glm` invocation).
-- **Log which engine was used.** The calling skill and the user should see "Review (engine=glm-5.1) complete" in session.log.
+- **Log which engine was used.** The calling skill and the user should see "Review (engine=glm-5.2) complete" in session.log.
 - **Never send the API key to stdout/stderr.** The env var is scoped to the subprocess; don't echo it.

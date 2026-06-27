@@ -2,14 +2,14 @@
 
 A Claude Code plugin that works invisibly. You code normally — CLoClo handles the rest:
 
-- **Codex + GLM-5.1 review your specs, plans, and code in parallel** between each development phase — two independent frontier models, consensus matrix for agreement/disagreement
+- **Codex + GLM-5.2 review your specs, plans, and code in parallel** between each development phase — two independent frontier models, consensus matrix for agreement/disagreement
 - **CodeRabbit runs static analysis** on every implementation before verification
 - **A persistent wiki compounds your project knowledge** with every change you make
 - **UI changes get visual verification** automatically via agent-browser
 
-You never need to call a command. CLoClo detects what you're doing and acts — or use `/coderabbit` for a standalone CodeRabbit review, or `/glm` for a standalone GLM-5.1 review.
+You never need to call a command. CLoClo detects what you're doing and acts — or use `/coderabbit` for a standalone CodeRabbit review, or `/glm` for a standalone GLM-5.2 review.
 
-**GLM-5.1 is optional.** Set `ZAI_API_KEY`, `GLM_API_KEY`, or `LLM_API_KEY_EXCENIA` in your shell. Missing key = silent skip; Codex still reviews every phase alone. The Z.ai plan is typically open-bar for GLM, so enabling it adds a second frontier-model opinion at no per-call cost.
+**GLM-5.2 is optional.** Set `ZAI_API_KEY`, `GLM_API_KEY`, or `LLM_API_KEY_EXCENIA` in your shell. Missing key = silent skip; Codex still reviews every phase alone. The Z.ai plan is typically open-bar for GLM, so enabling it adds a second frontier-model opinion at no per-call cost.
 
 ## Installation
 
@@ -29,13 +29,13 @@ CLoClo detects a feature request. Behind the scenes:
 
 ```
 SuperPowers brainstorms with you ──► spec
-    Codex + GLM-5.1 review the spec independently, in parallel
+    Codex + GLM-5.2 review the spec independently, in parallel
     Two independent frontier models = two perspectives; consensus matrix when they agree
     You react ("integrate all" / "point 2 is wrong" / anything)
     SuperPowers rewrites ──► final spec
 
 SuperPowers writes the plan ──► implementation plan
-    Codex + GLM-5.1 review the plan independently, in parallel
+    Codex + GLM-5.2 review the plan independently, in parallel
     You react
     SuperPowers rewrites ──► final plan
 
@@ -45,7 +45,7 @@ SuperPowers builds task DAG ──► dependency graph with file reservations
     Stakes-based approval: low-risk auto-dispatches, high-risk asks first
 
 SuperPowers executes ──► code (fresh subagent per task, bounded retries)
-    Codex + GLM-5.1 do real code review (git diff, type checks, bug hunting), in parallel
+    Codex + GLM-5.2 do real code review (git diff, type checks, bug hunting), in parallel
     + Adversarial triple-perspective: Skeptic / Devil's Advocate / Edge-Case Hunter
     + Every finding tagged [TOOL], [CODE], or [LLM-JUDGMENT]
     + Consensus matrix when Codex + GLM agree on a finding → [CONSENSUS], severity escalated
@@ -266,15 +266,15 @@ This matches the behavior of an interactive `codex` terminal session, minus the 
 
 If Codex is unavailable (not installed, usage limits, auth issues), CLoClo falls back to a Claude subagent for reviews. Less independent than Codex (same model family), but still catches real bugs because the reviewer has fresh context. Reviews are never skipped entirely.
 
-### GLM-5.1 reviews (parallel second opinion)
+### GLM-5.2 reviews (parallel second opinion)
 
-`glm-review` runs GLM-5.1 via Zhipu AI's Anthropic-compatible endpoint, in parallel with Codex during every review phase. It uses the already-installed `claude` CLI in a child process with three env vars overridden so the HTTP calls land on `api.z.ai/api/anthropic` instead of Anthropic:
+`glm-review` runs GLM-5.2 via Zhipu AI's Anthropic-compatible endpoint, in parallel with Codex during every review phase. It uses the already-installed `claude` CLI in a child process with three env vars overridden so the HTTP calls land on `api.z.ai/api/anthropic` instead of Anthropic:
 
 ```bash
 ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
 ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
-ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.1" \
-ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.1" \
+ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
+ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
 claude -p --permission-mode acceptEdits "$(cat "$prompt_file")"
 ```
 

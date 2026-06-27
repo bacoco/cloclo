@@ -133,7 +133,7 @@ Phase 9 opens a Pull Request via `superpowers:finishing-a-development-
 branch`, waits 10 min for installed bots, auto-applies their concrete
 patches under the 3 gates, re-reviews, and auto-merges with
 `--delete-branch` when clean. The user stays in the terminal. When a
-Z.ai API key is available, Phase 9.5 runs a final GLM-5.1 pass on the
+Z.ai API key is available, Phase 9.5 runs a final GLM-5.2 pass on the
 post-merge HEAD — open-bar safety net, non-blocking for P1/P2, auto-
 escalates P0.
 
