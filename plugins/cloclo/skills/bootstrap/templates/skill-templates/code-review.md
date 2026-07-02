@@ -3,24 +3,24 @@
 ## Frontmatter
 ```yaml
 name: code-review
-description: "Review de code end-to-end. Triggers: review, relis, verifie le code, audit code"
+description: "Use when reviewing recent changes end-to-end before merging — checks correctness, secrets, error handling, and regressions. Triggers: review, read over, check the code, code audit"
 ```
 
 ## Scope
-1. `git diff --stat HEAD~5` — Quels fichiers ont change recemment ?
-2. Pour chaque fichier modifie : lire le code, comprendre le changement
+1. `git diff --stat HEAD~5` — which files changed recently?
+2. For each changed file: read the code, understand the change.
 
 ## Checklist
-- [ ] Pas de secrets commites (.env, credentials)
-- [ ] Pas de console.log / print de debug
-- [ ] Gestion d'erreurs appropriee
-- [ ] Types corrects (pas de `any` en TS, pas de types manquants en Python)
-- [ ] Pas de code duplique
-- [ ] Tests pour les nouvelles fonctionnalites
-- [ ] Pas de regressions dans les fonctionnalites existantes
+- [ ] No committed secrets (.env, credentials)
+- [ ] No debug console.log / print
+- [ ] Proper error handling
+- [ ] Correct types (no `any` in TS, no missing types in Python)
+- [ ] No duplicated code
+- [ ] Tests for new functionality
+- [ ] No regressions in existing functionality
 
-## Rapport
-Pour chaque issue trouvee :
-- **Fichier:ligne** — Description du probleme
-- **Severite** : High / Medium / Low
-- **Fix suggere** : [code ou description]
+## Report
+For each issue found:
+- **File:line** — description of the problem
+- **Severity**: High / Medium / Low
+- **Suggested fix**: [code or description]

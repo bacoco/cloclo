@@ -1,17 +1,16 @@
 ---
 name: no_speculation
-description: Pas de langage speculatif dans les diagnostics — faits ou "je ne sais pas"
+description: Use when writing a technical diagnosis — state facts or "I don't know yet", never speculation
 type: feedback
 ---
-Ne jamais utiliser "probablement", "peut-etre", "il se pourrait que",
-"ca devrait" dans un diagnostic technique.
+Never use "probably", "maybe", "it might be", "it should" in a technical diagnosis.
 
-**Why:** Le langage speculatif donne une fausse impression de comprehension
-et retarde le vrai diagnostic. Le user prefere "je ne sais pas encore,
-je vais verifier" a une speculation qui se revele fausse.
+**Why:** Speculative language gives a false impression of understanding and
+delays the real diagnosis. The user prefers "I don't know yet, I'll check"
+over a guess that turns out wrong.
 
 **How to apply:**
-- BAD: "Le probleme est probablement dans le middleware d'auth"
-- GOOD: "Je vais lire le middleware d'auth pour verifier" → [lit le code] → "L'erreur est ligne 42 : le token expire n'est pas rafraichi"
-- BAD: "Ca devrait marcher maintenant"
-- GOOD: "Je lance les tests pour verifier" → [lance] → "Tests passent / echouent a X"
+- BAD: "The problem is probably in the auth middleware."
+- GOOD: "I'll read the auth middleware to check." → [reads] → "The error is at line 42: the expired token isn't refreshed."
+- BAD: "It should work now."
+- GOOD: "I'll run the tests to check." → [runs] → "Tests pass / fail at X."

@@ -3,33 +3,33 @@
 ## Frontmatter
 ```yaml
 name: deploy-and-verify
-description: "Rebuild + test + verify apres changements. Triggers: deploy, rebuild, verify, test after fix"
+description: "Use when files changed and you need to rebuild, health-check, and test before claiming done. Triggers: deploy, rebuild, verify, test after fix"
 ```
 
-## 1. Identifier + Rebuild
+## 1. Identify + rebuild
 
-| Fichier modifie | Commande rebuild | Health URL |
-|----------------|-----------------|------------|
+| Changed file | Rebuild command | Health URL |
+|--------------|-----------------|------------|
 | {{APP_1}}/ | {{BUILD_CMD_1}} | {{HEALTH_URL_1}} |
 | {{APP_2}}/ | {{BUILD_CMD_2}} | {{HEALTH_URL_2}} |
 
-## 2. Health Check
+## 2. Health check
 
 Poll `curl -sf {{HEALTH_URL}}` (max 30s, 5s intervals).
-Sur echec : lire les logs.
+On failure: read the logs.
 
 ## 3. Tests
 
-| Service | Commande test |
+| Service | Test command |
 |---------|--------------|
 | {{APP_1}} | {{TEST_CMD_1}} |
 | {{APP_2}} | {{TEST_CMD_2}} |
 
-## 4. Rapport
+## 4. Report
 ```
-Deploy verifie: [service] rebuilt + healthy + tests pass
+Deploy verified: [service] rebuilt + healthy + tests pass
 ```
 
-## Regles
-- JAMAIS demander "should I rebuild?" — juste le faire
-- JAMAIS claim done avant que le health check passe
+## Rules
+- NEVER ask "should I rebuild?" — just do it.
+- NEVER claim done before the health check passes.

@@ -3,36 +3,36 @@
 ## Frontmatter
 ```yaml
 name: code-audit
-description: "Audit de patterns dangereux dans le code. Triggers: audit, qualite, verifie le code, scan"
+description: "Use when scanning the codebase for dangerous patterns and code smells before a release or review. Triggers: audit, quality, check the code, scan"
 ```
 
-## Checks par stack
+## Checks by stack
 
 ### TypeScript/React
-- [ ] Selecteurs Zustand/Redux avec `|| []` (boucle infinie de re-render)
-- [ ] Reponses API non gardees (`response.data.field` sans verification)
-- [ ] `useEffect` sans deps array ou avec deps instables
-- [ ] `any` type qui masque des erreurs
+- [ ] Zustand/Redux selectors with `|| []` (infinite re-render loop)
+- [ ] Unguarded API responses (`response.data.field` without a check)
+- [ ] `useEffect` with no deps array or unstable deps
+- [ ] `any` type that hides errors
 - [ ] Hydration mismatches (SSR vs client)
 
 ### Python/FastAPI
-- [ ] `except: pass` ou `except Exception: pass` (exceptions avalees)
-- [ ] `list[0]` sans verifier la longueur (IndexError)
-- [ ] Acces fichier direct au lieu du storage abstrait
-- [ ] Classes response_model definies apres la route (NameError au startup)
-- [ ] SQL/Cypher injection (f-strings dans les queries)
+- [ ] `except: pass` or `except Exception: pass` (swallowed exceptions)
+- [ ] `list[0]` without checking length (IndexError)
+- [ ] Direct file access instead of the storage abstraction
+- [ ] `response_model` classes defined after the route (NameError at startup)
+- [ ] SQL/Cypher injection (f-strings in queries)
 
 ### Go
-- [ ] Erreurs non verifiees (`err` ignore)
-- [ ] Goroutine leaks (pas de context.Cancel)
-- [ ] Race conditions (acces concurrent sans mutex)
+- [ ] Unchecked errors (`err` ignored)
+- [ ] Goroutine leaks (no context cancel)
+- [ ] Race conditions (concurrent access without a mutex)
 
 ### General
-- [ ] Secrets en dur dans le code
-- [ ] URLs/ports hardcodes au lieu de variables d'env
-- [ ] Fichiers > 500 lignes sans bonne raison
-- [ ] Fonctions > 50 lignes
+- [ ] Hardcoded secrets in code
+- [ ] Hardcoded URLs/ports instead of env vars
+- [ ] Files > 500 lines without a good reason
+- [ ] Functions > 50 lines
 
-## Rapport
-Table : Fichier:ligne | Pattern | Severite | Fix
-Trier par severite (High → Medium → Low).
+## Report
+Table: File:line | Pattern | Severity | Fix
+Sort by severity (High → Medium → Low).

@@ -1,17 +1,17 @@
 ---
 name: diagnostic_sequence
-description: Sequence de diagnostic quand un build/test/deploy echoue
+description: Use when a build, test, or deploy fails — follow this sequence before proposing a fix
 type: feedback
 ---
-Quand quelque chose echoue, suivre cette sequence AVANT de proposer un fix :
+When something fails, follow this sequence BEFORE proposing a fix:
 
-**Why:** L'IA a tendance a proposer des fixes bases sur l'intuition plutot
-que sur l'erreur reelle. Lire l'erreur complete evite les fixes a cote.
+**Why:** AI tends to propose fixes based on intuition rather than the real error.
+Reading the full error avoids off-target fixes.
 
 **How to apply:**
-1. Lire l'erreur COMPLETE (pas juste la derniere ligne)
-2. Identifier la PREMIERE erreur (les suivantes sont souvent des cascades)
-3. Verifier si l'erreur est dans du code modifie ou existant
-4. Si docker : `docker ps` puis `docker logs --tail=50 <service>`
-5. Si import/module : verifier que le package est installe
-6. Ne JAMAIS dire "ca devrait marcher" apres un echec
+1. Read the FULL error (not just the last line).
+2. Identify the FIRST error (later ones are often cascades).
+3. Check whether the error is in changed code or existing code.
+4. If Docker: `docker ps` then `docker logs --tail=50 <service>`.
+5. If import/module: verify the package is installed.
+6. NEVER say "it should work" after a failure.

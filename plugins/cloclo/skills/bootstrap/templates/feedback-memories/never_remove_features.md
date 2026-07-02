@@ -1,15 +1,15 @@
 ---
 name: never_remove_features
-description: En simplifiant ou refactorant, changer le HOW pas le WHAT
+description: Use when simplifying, refactoring, or rewriting code — change the HOW, never the WHAT
 type: feedback
 ---
-Quand on simplifie, refactore, ou reecrit du code, ne JAMAIS retirer
-un comportement existant sans que le user l'ait explicitement demande.
+When simplifying, refactoring, or rewriting code, NEVER drop existing
+behavior unless the user explicitly asked for it.
 
-**Why:** L'IA tend a "simplifier" en supprimant des features edge-case
-qu'elle considere non essentielles. Le user decouvre les regressions plus tard.
+**Why:** AI tends to "simplify" by removing edge-case features it deems
+non-essential. The user discovers the regressions later.
 
 **How to apply:**
-1. AVANT de reecrire : lister tous les comportements existants
-2. Pendant : changer l'implementation, pas les features
-3. APRES : verifier que chaque comportement de la liste fonctionne encore
+1. BEFORE rewriting: list every existing behavior.
+2. DURING: change the implementation, not the features.
+3. AFTER: verify each behavior from the list still works.
