@@ -50,34 +50,16 @@ and Gemini. Otherwise the bot login is simply absent from the regex
 match and the polling loop ignores it. No error, no warning — Codex
 Cloud is treated as optional by design.
 
-## Consensus Amplification
+## Consensus, Disagreement, Auto-Integration
 
-When BOTH Codex (architecture) AND CodeRabbit (static analysis) flag the
-same file:line:
-- Mark `[CONSENSUS]` — high-confidence finding
-- Escalate severity to the higher of the two
-- Apply during Phase 6.5 auto-integration (consensus beats the 3-gate
-  skip)
+Defined once in `review-chain.md`:
 
-## Disagreement Handling
+- **Consensus** — any 2+ independent reviewers flag the same file:line
+  → `[CONSENSUS]`, severity escalated to the highest.
+- **Disagreement** — same file:line, different severities →
+  `[DISAGREEMENT]`, never averaged.
+- **Auto-integration** — the 3 gates (concrete patch, non-critical
+  domain, no conflicting patches) with an iteration cap of 3 for the
+  PR loop.
 
-When reviewers disagree (Codex flags P2, CodeRabbit flags P0 or vice-
-versa):
-- Mark `[DISAGREEMENT]`
-- If severity spread > 1 level AND the higher is `critical` → escalate
-- Otherwise apply the higher-severity fix and log the disagreement
-
-No averaging, no hiding the split.
-
-## Auto-Integration (the 3 gates)
-
-A bot finding is auto-applied only when ALL three gates pass:
-
-1. **Concrete patch available.** Bot provided a diff block or AI-Agent
-   prompt with file:line + replacement. Pure judgment-only findings
-   ("consider refactoring X") skipped.
-2. **Not auth / payments / data migration domain.** Escalate instead.
-3. **No conflicting patches across bots.** Different fixes at same
-   file:line → skip both, log `[CONFLICT]`.
-
-Iteration cap: 3. After cap, exit and log remaining findings.
+Do not restate these rules here — `review-chain.md` is canonical.

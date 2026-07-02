@@ -73,9 +73,14 @@ If NOT found: warn only. Phase 7.5 skips with warning; do not block the pipeline
 
 If Codex CLI, companion, or runtime fail (including usage limits):
 - WARNING: `"Codex unavailable. Using Claude agent review as fallback."`
-- Phases 2, 4, 6 still run, but use a Claude subagent (`subagent_type: "superpowers:code-reviewer"`, `model: "opus"`)
-- Same session file names (e.g. `02-review-spec.md`) — just engine differs
-- Decision Points A-E still apply
+- Phases 2, 4, 6 still run via a Claude subagent. Dispatch
+  `subagent_type: "general-purpose"` (or `"superpowers:code-reviewer"`
+  **only if** it is present in the running session's available agent
+  types — this is not discoverable from bash, so check the session's
+  own available agent types, never a shell probe). Use a
+  high-capability model for the review.
+- Same session file names (e.g. `02-codex-review-spec.md`) — just the engine differs
+- Auto-integration under the 3 gates still applies (`review-chain.md`)
 - Pipeline NEVER skips review phases entirely. At minimum, a Claude agent reviews.
 
 If CodeRabbit CLI unavailable:
