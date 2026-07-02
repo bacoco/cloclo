@@ -3,43 +3,47 @@
 ## Frontmatter
 ```yaml
 name: opensrc-sync
-description: "Synchronise le code source des dependances pour enrichir le contexte IA. Triggers: met a jour la doc, update sources, refresh deps, synchronise les sources, maj deps"
+description: "Use when refreshing the vendored source of core dependencies to enrich AI context — only on explicit request. Triggers: update the docs, update sources, refresh deps, sync sources"
 ```
 
-## Prerequis
+> This skill is OPTIONAL and opt-in. It requires Node.js 18+. Only create it if the
+> project opted into opensrc during bootstrap Phase 6.
 
-Si opensrc n'est pas installe :
-```bash
-cd /tmp && git clone https://github.com/vercel-labs/opensrc.git opensrc-cli
-cd opensrc-cli && npm install && npm run build && npm link
-```
+## Prerequisites (single source of truth for the install)
 
-Si le wrapper n'existe pas :
+Install opensrc **user-locally** — no root, persistent path (never `/usr/local/bin`,
+never `/tmp` which is wiped on reboot):
+
 ```bash
-cat > /usr/local/bin/opensrc-run << 'SCRIPT'
+mkdir -p "$HOME/.local/opensrc" "$HOME/.local/bin"
+git clone https://github.com/vercel-labs/opensrc.git "$HOME/.local/opensrc/opensrc-cli" 2>/dev/null || true
+( cd "$HOME/.local/opensrc/opensrc-cli" && npm install && npm run build )
+
+cat > "$HOME/.local/bin/opensrc-run" << 'SCRIPT'
 #!/usr/bin/env node
-import('/tmp/opensrc-cli/dist/index.js').then(m => m.createProgram().parse());
+import(process.env.HOME + '/.local/opensrc/opensrc-cli/dist/index.js').then(m => m.createProgram().parse());
 SCRIPT
-chmod +x /usr/local/bin/opensrc-run
+chmod +x "$HOME/.local/bin/opensrc-run"
+# Requires ~/.local/bin on PATH (add it to your shell profile if it isn't).
 ```
 
-## Phase 1 — Etat actuel
+## Phase 1 — Current state
 ```bash
 opensrc-run list --json 2>/dev/null || echo '{"packages":[],"repos":[]}'
 cat .claude/opensrc-tracked.json
 ```
 
-## Phase 2 — Detecter les mises a jour
+## Phase 2 — Detect updates
 
-Comparer les versions dans `opensrc/sources.json` avec les versions installees.
+Compare the versions in `opensrc/sources.json` against the installed versions.
 
 | Situation | Action |
 |-----------|--------|
-| Pas encore fetche | Fetch |
-| Version differente | Re-fetch |
-| Version identique | Skip |
+| Not fetched yet | Fetch |
+| Different version | Re-fetch |
+| Same version | Skip |
 
-## Phase 3 — Fetch/Update
+## Phase 3 — Fetch/update
 ```bash
 # npm packages
 opensrc-run {{PKG_1}} {{PKG_2}} --modify true
@@ -51,15 +55,15 @@ opensrc-run pypi:{{PKG_1}} pypi:{{PKG_2}} --modify true
 opensrc-run {{OWNER/REPO}} --modify true
 ```
 
-## Phase 4 — Rapport
+## Phase 4 — Report
 ```
-Sources mises a jour :
-  + [package] [version] (nouveau)
-  ~ [package] [old] → [new] (mis a jour)
-  = [package] [version] (deja a jour)
+Sources updated:
+  + [package] [version] (new)
+  ~ [package] [old] → [new] (updated)
+  = [package] [version] (already current)
 ```
 
-## Regles
-1. Jamais de fetch massif non demande — QUE quand le user le demande
-2. Pas de suppression sans confirmation
-3. Rapport toujours — meme si rien a faire
+## Rules
+1. Never mass-fetch unprompted — only when the user asks.
+2. No deletion without confirmation.
+3. Always report — even if nothing changed.

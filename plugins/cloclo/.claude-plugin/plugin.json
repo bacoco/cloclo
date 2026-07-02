@@ -1,7 +1,7 @@
 {
   "name": "cloclo",
-  "version": "0.8.1",
-  "description": "CLoClo — Dev pipeline (Claude+Codex CLI+CodeRabbit+Gemini Code Assist reviews on PR; Codex Cloud opt-in) + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki (persistent knowledge base) + behavioral patterns.",
+  "version": "0.9.0",
+  "description": "CLoClo — Code Loop Orchestrator: Claude + Codex + GLM + CodeRabbit + Gemini (Codex Cloud opt-in). Dev pipeline + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki + behavioral patterns for Claude Code.",
   "author": {
     "name": "Loic Baconnier"
   },

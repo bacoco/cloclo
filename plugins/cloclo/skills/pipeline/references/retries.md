@@ -7,11 +7,11 @@ runaway token spend.
 
 | Phase                                 | Max retries | On exhaustion                                       |
 |---------------------------------------|-------------|-----------------------------------------------------|
-| Phase 2 (Codex review spec)           | 2           | Skip review, warn user                              |
-| Phase 4 (Codex review plan)           | 2           | Skip review, warn user                              |
+| Phase 2 (Codex review spec)           | 2           | Claude subagent fallback (`review-chain.md`); skip only if the fallback also fails |
+| Phase 4 (Codex review plan)           | 2           | Claude subagent fallback (`review-chain.md`); skip only if the fallback also fails |
 | Phase 5 (Subagent execution)          | 3 per task  | Mark task BLOCKED, continue others                  |
-| Phase 6 (Codex review impl)           | 2           | Skip review, warn user                              |
-| Phase 6.5 (CodeRabbit review)         | 2           | Skip review, warn user — does NOT block pipeline    |
+| Phase 6 (Codex review impl)           | 2           | Claude subagent fallback (`review-chain.md`); skip only if the fallback also fails |
+| Phase 6.5 (CodeRabbit review)         | 2           | Skip review, warn user — non-blocking, no fallback  |
 | Phase 7 (Verification)                | 3           | FAIL pipeline, require user intervention            |
 | Phase 7.5 (Visual verification)       | 2 per page  | Log failure, continue to next page                  |
 
@@ -28,7 +28,7 @@ auto-detected.
 | Level  | When                          | Gates                                       | Parallelism | Review depth                                  |
 |--------|-------------------------------|---------------------------------------------|-------------|-----------------------------------------------|
 | `spike`| Exploring, prototyping        | Soft (user can skip freely)                 | 1 agent     | Codex optional, CodeRabbit optional           |
-| `dev`  | Active dev (default)          | Standard (A-E decisions)                    | Up to 3     | Codex all phases, CodeRabbit Phase 6.5        |
+| `dev`  | Active dev (default)          | Standard (auto-integration, 3 gates)        | Up to 3     | Codex all phases, CodeRabbit per Phase 6.5 condition (`review-chain.md`) |
 | `ship` | Pre-release, production       | Hard (no skip without documented reason)    | Up to 5     | Codex + CodeRabbit + adversarial triple-perspective |
 
 ## Auto-detection

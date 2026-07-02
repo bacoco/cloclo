@@ -18,8 +18,9 @@ or reads.
 
 ## Invocation — no flags, ever
 
-- `/pipeline` → auto-detect existing artifacts. If any exist, ask A/B/C
-  in the terminal. Else run fresh from Phase 1.
+- `/pipeline` → read `checkpoint.json` (authoritative); if missing or
+  corrupt, fall back to the artifact scan. If prior state exists, ask
+  A/B/C in the terminal. Else run fresh from Phase 1.
 - `/pipeline <free text>` → interpret text as a directive, skip the
   dialogue. Examples: `passe au plan`, `le code est ecrit revois`,
   `refais tout`, `pas de codex`, `ship mode`, `pas de PR`.
@@ -39,69 +40,46 @@ directive vocabulary: `references/smart-resume.md`.
 | 4.5 | Task DAG + briefs | inline | `08-task-dag.md`, `task-briefs/` |
 | 5 | Execute | `superpowers:subagent-driven-development` | commits on feature branch |
 | 6 | Review impl (Codex + GLM parallel, auto-integrate) | `codex-review` + `glm-review` (impl) | `07-codex-review-impl.md`, `07-glm-review-impl.md` |
-| 6.5 | Review impl static (opt-in when Phase 9 runs) | `coderabbit-review` | `07b-coderabbit-review-impl.md` |
+| 6.5 | Review impl static (conditional — see `references/review-chain.md`) | `coderabbit-review` | `07b-coderabbit-review-impl.md` |
 | 7 | Verify | `superpowers:verification-before-completion` | `09-compliance-report.md` |
 | 7.5 | Visual verify (if UI) | `agent-browser` | `screenshots/` |
 | 8 | Wiki ingest (auto) | inline | wiki updated |
 | 9 | Open PR + multi-bot auto-integrate + auto-merge | `superpowers:finishing-a-development-branch` | PR URL, merged, branch deleted |
-| 9.5 | Post-merge GLM review (open-bar safety net) | `glm-review` (impl) | `11-glm-post-merge-review.md` |
+| 9.5 | Post-merge GLM review (safety net) | `glm-review` (impl) | `11-glm-post-merge-review.md` |
 
-Full per-phase execution: `references/phases.md`. GLM runs only when a Z.ai API key is available (`ZAI_API_KEY`, `GLM_API_KEY`, or `LLM_API_KEY_EXCENIA` env var; or legacy `infra/.env` lookup). Missing key = silent skip, Codex alone covers the review.
+Full per-phase execution: `references/phases.md`. GLM runs only when a Z.ai API key is available (`ZAI_API_KEY` → `GLM_API_KEY`, optionally read from a project `.env`). Missing key = skipped with a logged warning; Codex alone covers the review.
+
+## Step 0: Toggle Check
+
+Before running the flagship, resolve the project root and check for a
+pause flag:
+
+```bash
+ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+[ -f "$ROOT/.cloclo-disabled" ] && echo "PAUSED"
+```
+
+If `.cloclo-disabled` exists, tell the user CLoClo is paused and ask
+whether to proceed anyway before starting Phase 1. Otherwise continue
+normally. (`/toggle` manages this flag.)
 
 ## Confidence-First Principle (applies everywhere)
 
 **Autonomous does not mean guessing.** Every decision — applying a
 finding, skipping it, interpreting a directive, picking a default —
-passes a confidence check. Below 95% confidence, ask the user.
+passes a confidence check. Below 95% confidence, ask the user in the
+terminal (never GitHub) with 2-3 concrete options, marking the
+recommended one and accepting free-form text.
 
-```dot
-digraph confidence_check {
-  "about to act" [shape=doublecircle];
-  "confident >= 95%?" [shape=diamond];
-  "act autonomously" [shape=box];
-  "ask user, 2-3 concrete options" [shape=box];
-  "log + continue" [shape=doublecircle];
-
-  "about to act" -> "confident >= 95%?";
-  "confident >= 95%?" -> "act autonomously" [label="yes"];
-  "confident >= 95%?" -> "ask user, 2-3 concrete options" [label="no"];
-  "act autonomously" -> "log + continue";
-  "ask user, 2-3 concrete options" -> "log + continue";
-}
-```
-
-**When to ask** (non-exhaustive): two valid interpretations of a user
-directive, reviewer finding touching out-of-scope code, test failure
-that could be regression or flake, CI red that could be infra, any
-"I think X but could be Y" situation.
-
-**Ask format — always the same:**
-
-```
-{Question en une phrase}
-
-Contexte : {1-2 lignes expliquant pourquoi}
-
-Options :
-A. {option 1 concrete}                    ← recommandee
-B. {option 2}
-C. {option 3 si pertinent}
-
-Ou tape ta reponse en texte libre.
-```
-
-2-3 concrete options, mark the recommended one, accept free-form text,
-terminal only — never GitHub.
-
-**Don't ask** when the answer is in `pipeline.config.md`, CLAUDE.md, or
-memory; or when the decision is reversible and low-impact. Don't ask
-trivial questions, don't guess on hard ones.
+Canonical decision flow, ask format, and the when / when-not-to-ask
+lists: `references/confidence-first.md`.
 
 ## Auto-Integration — The 3 Gates
 
 Every review phase (2, 4, 6, 6.5, 9) applies findings automatically
-under the same rule. A finding is auto-applied only when ALL three
-gates pass:
+under the same rule — this is the ONLY integration model; there are no
+interactive decision points in review phases. A finding is auto-applied
+only when ALL three gates pass:
 
 1. **Concrete patch or revision provided.** Bot/reviewer gave a diff,
    an AI-Agent prompt with file:line+replacement, or for spec/plan a
@@ -112,8 +90,11 @@ gates pass:
 3. **No conflicting patches across reviewers or findings.** Different
    fixes at the same file:line → skip both, log `[CONFLICT]`, ask.
 
-**Iteration cap:** 3 rounds for code phases, 2 for spec/plan. After
-cap, exit loop and escalate any remaining critical findings.
+Canonical statement, consensus and disagreement rules, iteration caps:
+`references/review-chain.md`.
+
+**Iteration caps:** 3 rounds for code phases, 2 for spec/plan. After
+the cap, exit the loop and escalate any remaining critical findings.
 
 **Commit format for auto-applied fixes:**
 
@@ -121,7 +102,7 @@ cap, exit loop and escalate any remaining critical findings.
 fix(phase-{N}): auto-apply {reviewer} findings ({N} fixes)
 
 - [file:line] — description
-- [CONSENSUS file:line] — description (Codex + CodeRabbit agreed)
+- [CONSENSUS file:line] — description (2+ independent reviewers agreed)
 
 Skipped (judgment-only or critical domain):
 - [file:line] — reason
@@ -130,29 +111,26 @@ Skipped (judgment-only or critical domain):
 ## PR-First + Auto-Merge (Phase 9)
 
 Phase 9 opens a Pull Request via `superpowers:finishing-a-development-
-branch`, waits 10 min for installed bots, auto-applies their concrete
-patches under the 3 gates, re-reviews, and auto-merges with
-`--delete-branch` when clean. The user stays in the terminal. When a
+branch`, waits for installed bots (bot-wait rule: first round until ≥1
+bot has posted, max 10 min; re-review iterations max 5 min — see
+`references/review-chain.md`), auto-applies their concrete patches
+under the 3 gates, re-reviews, and auto-merges with `--delete-branch`
+when clean. The user stays in the terminal. When a
 Z.ai API key is available, Phase 9.5 runs a final GLM-5.2 pass on the
-post-merge HEAD — open-bar safety net, non-blocking for P1/P2, auto-
-escalates P0.
+post-merge HEAD — an independent safety net, non-blocking for P1/P2,
+auto-escalates P0.
 
 **Default bots** (no extra config once installed): CodeRabbit GitHub App
 + Gemini Code Assist. **Opt-in:** Codex Cloud, Claude Code Action. Full
 stack + install URLs: `references/bot-stack.md`.
 
-**Consensus amplification:** when BOTH Codex and CodeRabbit flag the
-same file:line → `[CONSENSUS]`, escalate severity to the higher, apply
-even if standalone would skip (consensus beats the 3-gate skip).
+**Consensus:** any 2+ independent reviewers flag the same file:line →
+`[CONSENSUS]`. Full rule (severity escalation, when it overrides gate
+1, conflict handling): `references/review-chain.md`.
 
-**Disagreement handling:** spread > 1 severity level AND higher is
-`critical` → escalate. Otherwise apply the higher-severity fix and log
-the disagreement. Never average.
-
-**Escalation triggers:** iteration cap hit with criticals open, patch
-failed to apply (merge conflict or compile error), CI/required
-reviewers block merge, cross-reviewer `[DISAGREEMENT]` at critical
-severity. Escalation is terminal-only with the standard ask format.
+**Disagreement handling and escalation triggers:** defined once in
+`references/review-chain.md`. Escalation is terminal-only with the
+standard ask format.
 
 **Branch lifecycle:** on successful auto-merge,
 `gh pr merge --squash --delete-branch --auto` removes the branch
@@ -172,13 +150,15 @@ the user can push manual fixes and resume.
 
 Heavy detail, variant tables, and lookups live in `references/`:
 
-- `smart-resume.md` — detection map, A/B/C dialogue, directive interpretation table
+- `review-chain.md` — SHARED CONTRACT: 3 gates, consensus, disagreement, bot-wait rule, Phase 6.5 enable condition, escalation triggers
+- `smart-resume.md` — checkpoint-first resume, artifact-scan fallback, A/B/C dialogue, directive interpretation table
 - `bot-stack.md` — default + opt-in bot list with install URLs and costs
 - `phases.md` — full per-phase execution (the longest reference, 450+ lines)
 - `prerequisites.md` — SuperPowers/Codex/CodeRabbit/agent-browser auto-install + degraded modes
 - `model-policy.md` — Opus/Sonnet/Haiku mixed policy, per-phase assignments
 - `retries.md` — bounded retries, spike/dev/ship maturity levels
 - `session-files.md` — session dir layout, checkpoint.json, handoff.md formats
+- `confidence-first.md` — the 95% confidence gate, decision flow, ask format
 
 ## Important Rules
 

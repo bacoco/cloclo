@@ -1,15 +1,14 @@
 ---
 name: test_after_change
-description: Apres chaque modification, lancer les tests correspondants avant de claim done
+description: Use when about to claim a change is done or fixed — run the matching verification first
 type: feedback
 ---
-Jamais claim "c'est fixe" ou "c'est fait" sans avoir execute la verification.
+Never claim "it's fixed" or "it's done" without running the verification.
 
-**Why:** Le code qui "devrait marcher" ne marche pas dans 30% des cas.
-Seule la verification mesuree compte.
+**Why:** Code that "should work" often doesn't. Only measured verification counts.
 
-**How to apply:** Apres chaque modif :
-- Python : `pytest tests/ -x` ou `pytest tests/test_<module>.py`
-- TypeScript : `pnpm build` ou `pnpm typecheck`
-- Docker : `curl -sf health_url` ou `docker compose logs --tail=20`
-- Si pas de tests : au minimum verifier que le service demarre
+**How to apply:** After each change:
+- Python: `pytest tests/ -x` or `pytest tests/test_<module>.py`
+- TypeScript: `pnpm build` or `pnpm typecheck`
+- Docker: `curl -sf health_url` or `docker compose logs --tail=20`
+- No tests? At minimum confirm the service starts.

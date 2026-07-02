@@ -30,37 +30,39 @@
 - **{{PATTERN_2}}**: {{DESCRIPTION}}
 - **{{PATTERN_3}}**: {{DESCRIPTION}}
 
-## Regles Fondamentales (OBLIGATOIRE)
+## Core Rules (MANDATORY)
 
-1. **Confidence first** — Ne jamais modifier sans etre au moins 95% sur. En dessous, poser des questions ciblees.
-2. **Read before writing** — Toujours lire le code existant (Read/Grep/Glob) avant de modifier. Ne jamais supposer l'etat actuel.
-3. **Act fast, verify immediately** — Apres chaque fix, tester immediatement (test, curl, build) et montrer l'output.
-4. **Explorer avant de creer** — Toujours Glob/Grep avant de creer un hook, store, ou composant. Ils existent probablement deja.
-5. **Lire les types avant d'acceder** — Verifier l'interface/type reel avant de supposer qu'un champ existe.
-6. **Commit par checkpoint** — Apres 3-5 changements testes, commit. Jamais 10+ changements non commites.
+1. **Confidence first** — never modify code without being at least 95% sure. Below that, ask targeted questions.
+2. **Read before writing** — always read the existing code (Read/Grep/Glob) before changing it. Never assume the current state.
+3. **Act fast, verify immediately** — after every fix, test right away (test, curl, build) and show the output.
+4. **Explore before creating** — always Glob/Grep before creating a hook, store, or component. It probably already exists.
+5. **Read types before accessing** — check the real interface/type before assuming a field exists.
+6. **Commit by checkpoint** — after 3-5 tested changes, commit. Never 10+ uncommitted changes.
 
-## Erreurs Recurrentes (OBLIGATOIRE)
+## Recurring Errors (MANDATORY)
 
-1. **Explorer avant de creer** — Toujours Glob/Grep avant de creer. Ca existe probablement deja.
-2. **Lire les interfaces avant d'acceder aux champs** — Ne jamais supposer qu'un champ existe. Verifier la structure reelle.
+1. **Explore before creating** — always Glob/Grep before creating. It probably already exists.
+2. **Read interfaces before accessing fields** — never assume a field exists; check the real structure.
 3. {{STACK_SPECIFIC_ERROR_1}}
 4. {{STACK_SPECIFIC_ERROR_2}}
 
-## Demarrage Session (OBLIGATOIRE)
+## Session Start (MANDATORY)
 
-Au TOUT PREMIER message d'une session, AVANT de repondre au user :
+At the VERY FIRST message of a session, BEFORE replying to the user:
 
 1. `git log --oneline -5` + `git status --short`
-2. `docker ps --format "table {{.Names}}\t{{.Status}}" | head -15` (si Docker)
-3. Lire `MEMORY.md` pour le contexte persistant
-4. Resume en 3-4 lignes : "Dernier travail: X. Etat: Y services up, Z fichiers modifies."
-5. Proposer l'action la plus pertinente OU demander "Qu'est-ce qu'on attaque ?"
+2. `docker ps --format "table {{.Names}}\t{{.Status}}" | head -15` (if Docker; the `{{.Names}}`/`{{.Status}}` are literal Go template tokens, not placeholders)
+3. Read `MEMORY.md` for persistent context
+4. Summarize in 3-4 lines: "Last work: X. State: Y services up, Z files changed."
+5. Propose the most relevant action OR ask "What do we tackle?"
 
-## Test Credentials (Dev)
-```
-{{CREDENTIALS}}
-```
+## Secrets & Credentials
+
+Never store credentials in this file (it is tracked in git). Keep dev credentials and API
+keys in an untracked `.env.local` at the project root, and ensure `.env.local` is listed in
+`.gitignore`. Reference the variable names here if needed, never the values.
 
 ---
-**Adapte chaque section au projet reel. Les sections marquees OBLIGATOIRE sont non-negociables.**
-**Les {{PLACEHOLDERS}} doivent etre remplaces par les valeurs reelles detectees en Phase 1.**
+**Adapt every section to the real project. Sections marked MANDATORY are non-negotiable.**
+**The `{{PLACEHOLDER}}` tokens must be replaced with the real values detected in Phase 1.**
+**Exception: literal `{{.Names}}` / `{{.Status}}` in docker `--format` strings are Go template syntax — leave them as-is.**

@@ -1,17 +1,17 @@
 ---
 name: execute_not_plan
-description: Quand le user dit fix/cree/corrige — executer, pas planifier
+description: Use when the user gives an action verb (fix, create, correct, merge) — do it, don't just plan it
 type: feedback
 ---
-Ne JAMAIS proposer un plan de 15 etapes puis attendre validation.
-Quand le user dit "fix", "cree", "corrige", "merge" — le FAIRE.
+Never propose a 15-step plan and then wait for approval.
+When the user says "fix", "create", "correct", "merge" — DO it.
 
-**Why:** Le user paie pour du code, pas pour des documents de planification.
-Les plans sans execution sont la frustration #1 des utilisateurs d'IA coding.
+**Why:** The user pays for code, not planning documents.
+Plans without execution are a top frustration with AI coding.
 
-**How to apply:** Si le verbe est un imperatif d'action :
-1. Lire le code concerne (verify first)
-2. Faire le changement
-3. Tester
-4. Montrer le resultat
-Pas de "voici mon plan en 8 etapes" — juste faire.
+**How to apply:** If the verb is an action imperative:
+1. Read the relevant code (verify first)
+2. Make the change
+3. Test
+4. Show the result
+No "here's my 8-step plan" — just do it.

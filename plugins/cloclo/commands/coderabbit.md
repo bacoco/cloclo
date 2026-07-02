@@ -1,7 +1,7 @@
 ---
 description: Run a CodeRabbit CLI review on current changes (committed or uncommitted) — standalone, outside the /pipeline flow
 argument-hint: "[committed|uncommitted|all] [base-ref]"
-allowed-tools: Bash(coderabbit *), Bash(git *), Read
+allowed-tools: Bash(coderabbit:*), Bash(git:*), Read
 ---
 
 # /coderabbit — Standalone CodeRabbit Review
@@ -22,12 +22,12 @@ Examples:
 
 ## Execution Steps
 
-1. **Verify CodeRabbit CLI available.** If missing, tell the user to install:
+1. **Verify CodeRabbit CLI available.** Install/auth requirements are documented
+   once in the `coderabbit-review` skill (§2 Prerequisites) — do not duplicate
+   them here. Just gate on presence:
    ```bash
-   command -v coderabbit || {
-     echo "CodeRabbit CLI not found. Install:"
-     echo "  curl -fsSL https://cli.coderabbit.ai/install.sh | sh"
-     echo "  coderabbit auth login"
+   command -v coderabbit >/dev/null || {
+     echo "CodeRabbit CLI not found. See the coderabbit-review skill §2 for install + auth."
      exit 1
    }
    ```
@@ -42,12 +42,18 @@ Examples:
 
    ```bash
    cd "$(git rev-parse --show-toplevel)"
+   # < /dev/null: coderabbit's default mode is interactive and can hang on
+   #   inherited stdin / auth prompts. timeout 600 caps a wedged run.
+   # --plain: standalone human-readable output (no session files, no --agent).
    if [ "$TYPE" = "committed" ]; then
-     coderabbit review --plain --type committed --base "$BASE"
+     # $BASE may be a branch (main) or a ref (HEAD~5). Resolve to a SHA and use
+     # --base-commit (--base takes a branch name only). rev-parse handles both.
+     BASE_SHA=$(git rev-parse "$BASE") || { echo "Invalid base ref: $BASE"; exit 1; }
+     timeout 600 coderabbit review --plain --type committed --base-commit "$BASE_SHA" < /dev/null
    elif [ "$TYPE" = "uncommitted" ]; then
-     coderabbit review --plain --type uncommitted
+     timeout 600 coderabbit review --plain --type uncommitted < /dev/null
    else
-     coderabbit review --plain --type all
+     timeout 600 coderabbit review --plain --type all < /dev/null
    fi
    ```
 
@@ -63,7 +69,7 @@ Examples:
 
 ## Important Rules
 
-- **Do NOT use `/pipeline`.** This command is standalone. No session dir, no decision point files, no phase tracking.
+- **Do NOT use `/pipeline`.** This command is standalone. No session dir, no session files, no phase tracking, no auto-integration.
 - **Do NOT auto-fix.** Show findings first; user decides.
 - **Foreground only.** No background, no polling.
 - **Plain-text output** (`--plain`), not `--agent`. The user sees the review directly; structured parsing not needed for standalone use.

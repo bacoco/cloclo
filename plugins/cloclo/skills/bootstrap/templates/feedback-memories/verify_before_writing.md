@@ -1,16 +1,16 @@
 ---
 name: verify_before_writing
-description: Toujours Grep/Glob le code existant AVANT de creer quoi que ce soit
+description: Use when about to create any new file, component, hook, or utility — Grep/Glob the existing code first
 type: feedback
 ---
-Ne jamais supposer qu'un composant, hook, utility, ou pattern n'existe pas.
-Avant de creer un nouveau fichier, faire minimum 3 recherches Grep/Glob.
+Never assume a component, hook, utility, or pattern does not exist.
+Before creating a new file, do at least 3 Grep/Glob searches.
 
-**Why:** L'IA a tendance a creer du code duplique. Dans un audit, 5 "gaps"
-declares comme manquants existaient tous deja dans le codebase.
+**Why:** AI tends to create duplicate code. It is common in audits for "missing"
+functionality to already exist somewhere in the codebase.
 
-**How to apply:** Avant chaque Write d'un nouveau fichier, faire :
-1. Glob pour le nom du composant/module
-2. Grep pour les fonctions/classes similaires
-3. Grep pour les patterns existants dans le meme domaine
-Si un equivalent existe, l'utiliser ou l'etendre. Ne creer que si rien n'existe.
+**How to apply:** Before every Write of a new file:
+1. Glob for the component/module name
+2. Grep for similar functions/classes
+3. Grep for existing patterns in the same domain
+If an equivalent exists, use or extend it. Only create when nothing exists.

@@ -33,16 +33,16 @@ digraph confidence_check {
 ## Ask Format (always the same)
 
 ```
-{Question en une phrase}
+{One-sentence question}
 
-Contexte : {1-2 lignes expliquant pourquoi la question se pose}
+Context: {1-2 lines explaining why the question comes up}
 
-Options :
-A. {option 1 concrete}                                    ← recommandee
+Options:
+A. {concrete option 1}                                    ← recommended
 B. {option 2}
-C. {option 3 si pertinent}
+C. {option 3 if relevant}
 
-Ou tape ta reponse en texte libre.
+Or type your answer as free text.
 ```
 
 - 2-3 concrete options (not open-ended)

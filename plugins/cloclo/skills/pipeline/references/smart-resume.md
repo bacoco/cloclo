@@ -4,7 +4,20 @@
 the terminal dialogue (bare invocation) or a natural-language directive
 (free text after the command).
 
-## Detection Map
+## Resume State: checkpoint.json First, Artifact Scan as Fallback
+
+**`checkpoint.json` is authoritative.** When it exists and parses, its
+`completed_phases` ordered list (see `session-files.md`) determines
+where the session stands — do NOT re-derive state from artifacts.
+
+**The artifact scan below is the FALLBACK**, used only when
+`checkpoint.json` is missing or corrupt (unparseable JSON, missing
+`completed_phases`). It reconstructs the same state from files on disk.
+
+Either way, the result feeds the same single A/B/C resume question —
+there is only one resume dialogue.
+
+## Detection Map (fallback artifact scan)
 
 | Artifact found | Means | Effect |
 |----------------|-------|--------|
@@ -21,23 +34,24 @@ the terminal dialogue (bare invocation) or a natural-language directive
 
 ## Decision Logic
 
-1. Run detection. Build the list of existing artifacts.
+1. Read `checkpoint.json`. If valid → state = its `completed_phases`.
+   If missing/corrupt → run the fallback artifact scan.
 2. If user passed free text after `/pipeline` → interpret as directive, skip dialogue.
 3. If nothing exists and no directive → run from Phase 1.
-4. If artifacts exist and no directive → ask ONE terminal question:
+4. If prior state exists and no directive → ask ONE terminal question:
 
 ```
-Session "{slug}" a deja :
+Session "{slug}" already has:
   ✓ Phase 1 spec    ({path})
   ✓ Phase 3 plan    ({path})
   ✓ Phase 5 commits (branch {branch}, {N} commits ahead of main)
 
-Phases manquantes : 2, 4, 6, 6.5, 7, 7.5, 8, 9
+Missing phases: 2, 4, 6, 6.5, 7, 7.5, 8, 9
 
-Quoi faire ?
-A. Continue avec l'existant (skip ce qui est fait)          ← default
-B. Refais tout from Phase 1 (ecrase les artifacts existants)
-C. Jumpe a la phase de review (part de Phase 6)
+What next?
+A. Continue with the existing artifacts (skip what is done)   ← default
+B. Redo everything from Phase 1 (overwrites existing artifacts)
+C. Jump to the review phase (start at Phase 6)
 ```
 
 Default = A. No flags, ever.
@@ -59,6 +73,7 @@ interpretation, act. French, English, and mixed phrasing all accepted.
 | `pas de PR`, `no PR`, `direct merge` | Skip Phase 9 | Commits stay on feature branch or merge direct |
 | `spike mode`, `en prototype` | maturity=spike | Soft gates, no Phase 9 |
 | `ship mode`, `production` | maturity=ship | Hard gates, adversarial pass |
+| `avec coderabbit`, `with coderabbit` | Enable Phase 6.5 | CodeRabbit CLI review runs (enable condition: `review-chain.md`) |
 | `avec claude action`, `with codex cloud` | Opt-in extra bots | Add to Phase 9 wait-set |
 
 ### Parsing Rules

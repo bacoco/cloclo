@@ -17,9 +17,10 @@ Copy or symlink to `{session_dir}/01-spec.md`.
 ## Phase 2: Spec Review (Auto-Integrate) — Codex + GLM in parallel
 
 Two independent reviewers run simultaneously. Each sees the same spec, writes to its
-own output file, and the calling skill merges their findings via the consensus matrix.
+own output file, and the calling skill merges their findings under the
+consensus and 3-gate rules in `review-chain.md`.
 
-**Codex (primary, GPT-5.5):**
+**Codex (primary — the Codex CLI's default frontier model):**
 - Invoke `codex-review` skill with:
   - `review_type`: `spec`
   - `input_file`: `{session_dir}/01-spec.md`
@@ -29,25 +30,24 @@ own output file, and the calling skill merges their findings via the consensus m
 - Invoke `glm-review` skill with the same parameters but:
   - `output_file`: `{session_dir}/02-glm-review-spec.md`
 
-**Parallel dispatch pattern:**
-```bash
-(invoke codex-review ...) &  CODEX_PID=$!
-(invoke glm-review   ...) &  GLM_PID=$!
-wait $CODEX_PID; wait $GLM_PID
-```
+**Parallel dispatch pattern:** run the two reviewer CLIs (Codex's
+`codex exec` and GLM's `claude -p`) as parallel background Bash jobs,
+with each review skill's logic inlined (its command, `< /dev/null`,
+`timeout 900`, `output_file`, and post-run guard — see
+`review-chain.md`). Launch both, then wait for both to exit before
+merging findings.
 
-Both run in background jobs; the skill waits for both before proceeding. Typical
-total time = max(codex_time, glm_time) ≈ 3-8 minutes (limited by the slower model,
-not the sum).
+Typical total time = max(codex_time, glm_time) ≈ 3-8 minutes (limited by the
+slower model, not the sum).
 
 **Availability gates:**
 - Codex unavailable (CLI missing, usage limit) → its built-in Claude fallback runs. Never skipped silently.
 - GLM unavailable (no Z.ai key, API down) → **skipped with warning**, no fallback. Codex still produces a review, so the phase still has ≥1 opinion.
 - Both unavailable → log warning, proceed to next phase without review. This is the only case where Phase 2 actually skips entirely.
 
-**Auto-Integration (replaces old Decision Point #1):**
+**Auto-Integration:**
 
-Apply the same 3-gate rule as Phase 9 Step 5, adapted for spec content:
+Apply the 3-gate rule (canonical: `review-chain.md`), adapted for spec content:
 1. **Concrete revision available** — reviewer identified specific section + what it should say (not vague "consider X").
 2. **Not a design pivot** — reviewer flagged an inconsistency, missing edge case, or infeasibility (factual). Semantic design alternatives ("approach A vs B") do NOT auto-apply — escalate.
 3. **No contradictions** — if two reviewer findings contradict each other at the same section, skip both, log `[CONFLICT]`.
@@ -82,8 +82,8 @@ and write independent findings.
 Background-job dispatch + `wait` identical to Phase 2. GLM skip-on-missing-key
 semantics identical to Phase 2.
 
-**Auto-Integration (replaces old Decision Point #2):** same 3-gate rule
-as Phase 2 (concrete revision + factual fix + no contradictions). Apply
+**Auto-Integration:** same 3-gate rule as Phase 2 (concrete revision +
+factual fix + no contradictions — canonical: `review-chain.md`). Apply
 qualifying findings, rewrite plan → `{session_dir}/06-plan-v2.md`.
 
 **Escalation** only when the reviewer flags a circular task dependency
@@ -165,22 +165,28 @@ Record `base_ref` (SHA before execution) and `commit_list` (all new commits).
 ## Phase 6: Implementation Review (Auto-Integrate) — Codex + GLM in parallel
 
 Same parallel dispatch pattern. Both reviewers see the spec, plan, base_ref, and
-commit_list. They produce independent findings files, merged through the 3-reviewer
-consensus matrix (GLM counts as a 3rd voice alongside Codex and, if enabled, CodeRabbit
-CLI in Phase 6.5).
+commit_list. They produce independent findings files, merged under the consensus
+and 3-gate rules in `review-chain.md` (GLM counts as an independent voice
+alongside Codex and, when Phase 6.5 runs, CodeRabbit CLI).
 
 - `codex-review`: `review_type: impl`, `output_file: 07-codex-review-impl.md`
 - `glm-review`:   `review_type: impl`, `output_file: 07-glm-review-impl.md`
-- Both receive `spec_path`, `plan_path`, `base_ref`, `commit_list`.
+- Both receive `input_file`, `spec_path`, `plan_path`, `base_ref`, `commit_list`.
 
-**Consensus extensions for 2+ reviewers:**
-- 2-of-2 agreement on a file:line → `[CONSENSUS]`, severity max, apply.
-- 2-of-3 agreement (if CodeRabbit 6.5 runs too) → `[MAJORITY]`, apply.
-- 1-of-2 or 1-of-3 flag → present to the 3-gate auto-integration (same as today).
+`input_file` is **required** by both review skills. For an implementation
+review it is the diff under review — the range `base_ref..HEAD`. Write it
+to `{session_dir}/07-impl-diff.patch` (`git diff base_ref..HEAD > …`) and
+pass that path as `input_file`. Phase 9.5 already passes `input_file` the
+same way; keep it consistent across every impl review.
 
-**Auto-Integration (replaces old Decision Point #3):** same 3-gate rule
-as Phase 9 (concrete patch + non-critical domain + no cross-finding
-conflict). Apply qualifying fixes as new commits on the feature branch.
+**Consensus:** any 2+ independent reviewers flag the same file:line →
+`[CONSENSUS]`. Single-reviewer findings go through the normal 3-gate
+auto-integration. Full rule: `review-chain.md`.
+
+**Auto-Integration:** same 3-gate rule as Phase 9 (concrete patch +
+non-critical domain + no cross-finding conflict — canonical:
+`review-chain.md`). Apply qualifying fixes as new commits on the
+feature branch.
 
 Commit format:
 ```
@@ -197,21 +203,25 @@ Skipped (judgment-only or critical domain):
 `critical` or `high` findings, or a finding lands in auth / payments /
 data migration and needs human judgment.
 
-## Phase 6.5: CodeRabbit Review (opt-in when Phase 9 runs, Auto-Integrate)
+## Phase 6.5: CodeRabbit Review (Conditional, Auto-Integrate)
 
-When enabled (either `--coderabbit-cli` flag, `maturity=ship`, or App not
-installed on repo), invoke `coderabbit-review` skill with:
+Runs when `maturity=ship`, OR the CodeRabbit GitHub App is not
+installed on the repo, OR the user asked for CodeRabbit in their
+directive. This condition is defined once in `review-chain.md` — no
+CLI-style flags exist.
+
+When it runs, invoke the `coderabbit-review` skill with:
 - `session_dir`: current session dir
 - `output_file`: `{session_dir}/07b-coderabbit-review-impl.md`
 - `base_ref`: git SHA from Phase 5
 
 If CodeRabbit CLI unavailable → skip with warning.
 
-**Auto-Integration (replaces old Decision Point #3b):** same 3-gate rule.
+**Auto-Integration:** same 3-gate rule (canonical: `review-chain.md`).
 
-If both Codex AND CodeRabbit flag the same file:line → mark `[CONSENSUS]`,
-escalate severity to the higher of the two, and apply (higher evidence
-weight → worth applying even on lower-confidence standalone findings).
+**Consensus:** CodeRabbit findings join the Phase 6 findings pool —
+any 2+ independent reviewers flagging the same file:line →
+`[CONSENSUS]`. Full rule: `review-chain.md`.
 
 ## Phase 7: Verify — `superpowers:verification-before-completion`
 
@@ -249,6 +259,9 @@ Runs only if Phase 5 touched `.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`,
    `screenshot {session_dir}/screenshots/<page>.png`
 3. **Read and verify EVERY screenshot immediately.** Unread = not verified.
 4. If issues → fix code → re-run → new commit.
+5. **Always run `agent-browser close` when done** — even if a step
+   above failed or the phase is aborting. Wrap the capture loop so the
+   close runs in all exit paths (leaked browser sessions pin the host).
 
 Use the project's actual port (typically from docker/dev server), never assume.
 
@@ -320,22 +333,27 @@ handles:
 ### Step 3: Wait for bot reviews
 
 After PR opens, bots take 2-10 minutes each (CodeRabbit ~3 min, Gemini ~2 min,
-Codex Cloud ~5 min, Claude Action depends on workflow). Wait for at least ONE
-bot to post AND a minimum of 10 minutes elapsed, whichever comes first. Poll
+Codex Cloud ~5 min, Claude Action depends on workflow).
+
+**Bot-wait rule** (single rule, canonical in `review-chain.md`): on the
+first review round, wait until at least ONE bot has posted, with a hard
+maximum of 10 minutes wall-clock — if nothing posted by then, proceed.
+On re-review iterations (Step 5), the maximum is 5 minutes. Poll
 comments + reviews (not just comments — several bots post via `reviews`):
 
 ```bash
-# Strict match: author exact (left-anchored, optional -[suffix]) avoids false
-# positives like "coderabbits-fork" or "my-gemini-bot".
+# Strict match: full login, anchored, exact. GitHub App bots post as
+# "<name>[bot]" — match the literal "[bot]" suffix (escaped in the regex).
 gh pr view --json comments,reviews --jq '
   ([.comments[] | {who: .author.login, source: "comment", body: .body}]
    + [.reviews[]  | {who: .author.login, source: "review",  body: .body}])
-  | map(select(.who | test("^(coderabbitai|gemini-code-assist|chatgpt-codex-connector|claude-bot)$")))
+  | map(select(.who | test("^(coderabbitai\\[bot\\]|gemini-code-assist\\[bot\\]|chatgpt-codex-connector\\[bot\\]|claude\\[bot\\]|github-actions\\[bot\\])$")))
 '
 ```
 
-Regex is anchored and lists each bot's exact login. Extend the alternation
-when adding a new bot — do not loosen to substring match.
+Regex is anchored and lists each bot's exact login (App logins carry the
+`[bot]` suffix, e.g. `claude[bot]`, `github-actions[bot]`). Extend the
+alternation when adding a new bot — do not loosen to a substring match.
 
 **Supported bots** (install once per repo/org, then auto-review every PR):
 
@@ -359,9 +377,6 @@ flag in `pipeline.config.md`) see their output — if Codex Cloud is not opted
 in, the login simply never appears in the poll results and the loop ignores
 it. Full rationale and opt-in syntax: `bot-stack.md`.
 
-Wait until at least one bot has posted a comment OR 5 minutes have elapsed,
-whichever comes first.
-
 ### Step 4: Aggregate findings
 
 Read each bot's comments. Produce a consolidated digest
@@ -377,8 +392,8 @@ Read each bot's comments. Produce a consolidated digest
 - ...
 
 ## Consensus Findings
-Items flagged by 2+ bots at the same file:line:
-- [CONSENSUS high] file:line — ...
+Items flagged by 2+ independent reviewers at the same file:line (rule: review-chain.md):
+- [CONSENSUS P1] file:line — ...
 
 ## Disagreements
 Items where bots disagree on severity:
@@ -394,38 +409,28 @@ re-reviewed, merged when clean.
 ```dot
 digraph auto_integration {
   "open PR" [shape=box];
-  "wait 10 min for bots" [shape=box];
+  "wait for bots (bot-wait rule: first round ≥1 bot, max 10 min)" [shape=box];
   "parse findings" [shape=box];
   "any applicable fixes?" [shape=diamond];
   "apply fixes" [shape=box];
   "push commit" [shape=box];
-  "bots re-review" [shape=box];
+  "bots re-review (max 5 min)" [shape=box];
   "iteration < 3?" [shape=diamond];
   "auto-merge" [shape=doublecircle];
   "escalate to user" [shape=doublecircle];
 
-  "open PR" -> "wait 10 min for bots" -> "parse findings" -> "any applicable fixes?";
+  "open PR" -> "wait for bots (bot-wait rule: first round ≥1 bot, max 10 min)" -> "parse findings" -> "any applicable fixes?";
   "any applicable fixes?" -> "apply fixes" [label="yes"];
   "any applicable fixes?" -> "auto-merge" [label="no"];
-  "apply fixes" -> "push commit" -> "bots re-review" -> "iteration < 3?";
+  "apply fixes" -> "push commit" -> "bots re-review (max 5 min)" -> "iteration < 3?";
   "iteration < 3?" -> "parse findings" [label="yes"];
   "iteration < 3?" -> "escalate to user" [label="no — stop and report"];
 }
 ```
 
-**An "applicable fix" must meet ALL three gates:**
-
-1. **Concrete patch available.** The bot provided a diff block or an "AI
-   Agent prompt" with file:line and exact replacement text. Pure
-   LLM-judgment findings ("consider refactoring X") are skipped — they lack
-   the concrete patch needed for autonomous apply.
-
-2. **No auth / payments / data migration domain.** Auto-apply is forbidden
-   in these critical domains even with a concrete patch. Escalate instead.
-
-3. **No conflicting patches across bots.** If CodeRabbit and Gemini propose
-   different fixes at the same file:line, skip both and log
-   `[CONFLICT — manual review needed]`.
+**An "applicable fix" must pass the 3 gates** (concrete patch,
+non-critical domain, no conflicting patches — canonical statement,
+plus the consensus override, in `review-chain.md`).
 
 **Commit format per iteration:**
 ```
@@ -462,28 +467,26 @@ Write to `session.log`:
 
 **Escalation path — only when blocked:**
 
-Escalate to the user (in the terminal, NOT on GitHub) ONLY when one of:
+Escalate to the user (in the terminal, NOT on GitHub) ONLY on the
+shared escalation triggers listed in `review-chain.md` (iteration cap
+with P0/P1 open, patch failed to apply, CI/required reviewers block,
+`[DISAGREEMENT]` at P0, `[CONFLICT]`).
 
-- Iteration cap (3) hit with `critical` or `high` findings still open
-- A fix patch failed to apply (merge conflict or compile error)
-- CI / required reviewers block the merge
-- Consensus `[DISAGREEMENT]` at `critical` severity — bots disagree, can't decide
-
-Escalation message (French, per user's local IA language):
+Escalation message:
 ```
-Phase 9 bloquée sur PR #<N> — la boucle auto n'a pas pu finir.
+Phase 9 blocked on PR #<N> — the auto-integration loop could not finish.
 
-Cause: {iteration_cap | fix_failed | ci_blocked | disagreement}
-Findings restants: {N} (dont {C} critical/high)
+Cause: {iteration_cap | fix_failed | ci_blocked | disagreement | conflict}
+Remaining findings: {N} ({C} P0/P1)
 
-Fichiers:
+Files:
 - Digest: {session_dir}/10-pr-bot-digest.md
 - PR URL: {pr_url}
 
 Options:
-A. Fix manuellement en local et dis "continue" → je merge
-B. Laisse la PR ouverte, on passera plus tard
-C. Force-merge quand meme (gh pr merge --squash --admin)
+A. Fix manually in your local checkout, then say "continue" → I merge
+B. Leave the PR open, we come back to it later
+C. Force-merge anyway (gh pr merge --squash --admin)
 ```
 
 This is the ONLY point where the user might need to touch GitHub — and
@@ -522,7 +525,7 @@ and the permanent GitHub PR record is more valuable than session-dir files
 alone for future audits. The user stays in the terminal; no context switch
 to the GitHub UI.
 
-## Phase 9.5: Post-Merge GLM Review (Open-Bar Safety Net)
+## Phase 9.5: Post-Merge GLM Review (Safety Net)
 
 Runs only when `glm-review` is available (Z.ai key present). Fires **after** the
 squash-merge of Phase 9 has landed on `main`. Catches two classes of problems the
@@ -565,15 +568,15 @@ Non-blocking by default. GLM findings on post-merge HEAD are written to
 - P1 findings → flagged in handoff, user decides in next session whether to fix.
 - **P0 findings → auto-escalate.** The user is alerted in the terminal with the 3-option ask (fix now / schedule follow-up / ignore with rationale).
 
-### Why this is cheap
+### Why this is worth it
 
-Z.ai GLM quota is open-bar for this user, so running a 4th independent model pass
-after the PR merges costs nothing and catches rare-but-real regressions that slip
-through the multi-bot PR loop. If the Z.ai key is missing, the phase is a silent
-no-op (same skip semantics as Phase 2/4/6 GLM dispatch).
+A 4th independent model pass after the PR merges is cheap relative to the
+regressions it catches — rare-but-real bugs that slip through the multi-bot
+PR loop. If the Z.ai key is missing, the phase is a no-op skipped with a
+logged warning (same skip semantics as Phase 2/4/6 GLM dispatch).
 
 ### Skip Conditions
 
-- No Z.ai API key available → silent skip.
+- No Z.ai API key available → skipped with a logged warning.
 - `maturity: spike` → skip (Phase 9 itself was skipped, so there's nothing to post-review).
 - Phase 9 escalated instead of merging → skip (the PR is still open; post-merge review is N/A until merge lands).

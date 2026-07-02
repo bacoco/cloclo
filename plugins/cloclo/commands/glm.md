@@ -1,7 +1,7 @@
 ---
 description: Run a GLM-5.2 code review on current changes via Z.ai Anthropic-compatible endpoint. Standalone, outside the /pipeline flow.
 argument-hint: "[committed|uncommitted|all] [base-ref]"
-allowed-tools: Bash(claude *), Bash(git *), Bash(grep *), Read, Write
+allowed-tools: Bash(claude:*), Bash(git:*), Bash(grep:*), Read
 ---
 
 # /glm — Standalone GLM-5.2 Review
@@ -11,7 +11,8 @@ three environment variables overridden so the calls land on Z.ai instead of
 Anthropic. Useful before opening a PR, after a quick fix, or to sanity-check
 work without entering the full pipeline.
 
-**Open bar.** The user has unlimited z.ai quota. Run this as often as you want.
+**Cost:** Z.ai is metered — each review spends tokens. Run it when a GLM opinion is
+worth the cost.
 
 ## Arguments
 
@@ -30,12 +31,14 @@ Examples:
 
    ```bash
    GLM_KEY=""
-   for var in ZAI_API_KEY GLM_API_KEY LLM_API_KEY_EXCENIA; do
+   for var in ZAI_API_KEY GLM_API_KEY; do
      val="${!var:-}"
      [ -n "$val" ] && GLM_KEY="$val" && break
    done
-   if [ -z "$GLM_KEY" ] && [ -f "$(git rev-parse --show-toplevel 2>/dev/null)/infra/.env" ]; then
-     GLM_KEY=$(grep -E '^LLM_API_KEY_EXCENIA=' "$(git rev-parse --show-toplevel)/infra/.env" | cut -d= -f2-)
+   # Project-local fallback: read ZAI_API_KEY / GLM_API_KEY from a .env at the repo root.
+   if [ -z "$GLM_KEY" ]; then
+     ENV_FILE="$(git rev-parse --show-toplevel 2>/dev/null)/.env"
+     [ -f "$ENV_FILE" ] && GLM_KEY=$(grep -E '^(ZAI_API_KEY|GLM_API_KEY)=' "$ENV_FILE" | head -n1 | cut -d= -f2-)
    fi
    [ -z "$GLM_KEY" ] && {
      echo "No Z.ai API key found. Set ZAI_API_KEY or GLM_API_KEY and retry."
@@ -65,12 +68,23 @@ Examples:
      uncommitted) DIFF=$(git diff HEAD) ;;
      all|*)       DIFF=$(git diff "$BASE"..HEAD; git diff HEAD) ;;
    esac
+
+   # Cap the inlined diff so a huge changeset can't blow past the model's context
+   # (or bloat argv). Beyond the cap, tell GLM to read the repo for the rest.
+   DIFF_MAX=200000   # ~200 KB
+   if [ "${#DIFF}" -gt "$DIFF_MAX" ]; then
+     DIFF="${DIFF:0:$DIFF_MAX}
+
+[... diff truncated at ${DIFF_MAX} bytes — inspect the remaining files directly with git in the repo ...]"
+   fi
    ```
 
 5. **Build the prompt:** a short code-review brief + the diff.
 
    ```bash
    PROMPT_FILE="/tmp/glm-review-$(date +%s).md"
+   # The prompt file holds the diff — clean it up even on interrupt.
+   trap 'rm -f "$PROMPT_FILE"' EXIT
    cat > "$PROMPT_FILE" <<EOF
    Tu es un reviewer senior. Analyse le diff ci-dessous et produis une review
    structuree : verdict global, puis findings par severite (P0/P1/P2) avec
@@ -94,12 +108,19 @@ Examples:
 
    ```bash
    echo "GLM-5.2 is reviewing... (this takes 2-8 minutes)"
+   # This command only prints the review to stdout — no file writes, so no
+   # acceptEdits. Read-only tools let GLM pull extra context if needed. `< /dev/null`
+   # closes stdin so a non-interactive child can't hang; `timeout 900` caps it.
    ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
    ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
    ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
    ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
-   claude -p --permission-mode acceptEdits "$(cat "$PROMPT_FILE")"
-   rm -f "$PROMPT_FILE"
+   ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.2" \
+   timeout 900 claude -p \
+     --allowedTools 'Read Grep Glob Bash(git diff:*) Bash(git log:*) Bash(git show:*)' \
+     "$(cat "$PROMPT_FILE")" \
+     < /dev/null
+   # $PROMPT_FILE is removed by the EXIT trap set in step 5.
    ```
 
 7. **Show findings verbatim** to the user. Do NOT summarize or filter.
@@ -116,4 +137,4 @@ Examples:
 - **Do NOT auto-fix.** Show findings; user decides.
 - **Foreground only.** No background, no polling.
 - **Never echo the API key.** Env var is scoped; don't print it to stdout or logs.
-- **Open bar quota.** Re-run this as often as needed — z.ai is unlimited for this user.
+- **Cost-aware.** Z.ai is metered — each review spends tokens. Re-run only when a fresh GLM pass is worth it.

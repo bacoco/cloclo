@@ -1,16 +1,16 @@
 ---
 name: commit_checkpoints
-description: Commit apres 3-5 changements testes — jamais 10+ non commites
+description: Use when several changes have accumulated — commit every 3-5 tested changes, never 10+ uncommitted
 type: feedback
 ---
-Apres 3 changements testes avec succes, creer un commit.
-Ne jamais accumuler plus de 5 changements non commites.
+After 3 successfully tested changes, create a commit.
+Never accumulate more than 5 uncommitted changes.
 
-**Why:** Accumuler beaucoup de changements sans commit rend le rollback
-impossible et transforme une petite erreur en perte de tout le travail.
+**Why:** Accumulating many uncommitted changes makes rollback impossible and
+turns a small mistake into losing all the work.
 
 **How to apply:**
-- Grouper les commits par logique (pas par volume)
-- Format : `type(scope): description` — feat, fix, refactor, test, docs
-- Si la tache necessite 10+ fichiers : commit en groupes de 3-4
-- Un revert de 3 fichiers est gerable. Un revert de 15 est un cauchemar.
+- Group commits by logic (not by volume).
+- Format: `type(scope): description` — feat, fix, refactor, test, docs.
+- If a task needs 10+ files: commit in groups of 3-4.
+- Reverting 3 files is manageable. Reverting 15 is a nightmare.

@@ -3,27 +3,27 @@
 ## Frontmatter
 ```yaml
 name: cross-service-debug
-description: "Trace les erreurs cross-service. Triggers: debug, trace erreur, 500 error, timeout"
+description: "Use when an error crosses service boundaries and you need to trace it to the root service. Triggers: debug, trace error, 500 error, timeout"
 ```
 
-## Chaine de services
+## Service chain
 ```
 {{FRONTEND}} → {{API_GATEWAY}} → {{BACKEND_1}} → {{BACKEND_2}} → {{DB_CACHE}}
 ```
 
 ## Workflow
 
-1. **Identifier le symptome** — Ou est l'erreur visible ? (frontend, logs, monitoring)
-2. **Tracer en remontant** — Lire les logs du service le plus proche de l'erreur, puis remonter la chaine
-3. **Identifier la root cause** — Quel service genere l'erreur originale ?
-4. **Fixer** — Corriger dans le bon service
-5. **Verifier** — Re-tester la chaine complete
+1. **Identify the symptom** — where is the error visible? (frontend, logs, monitoring)
+2. **Trace upstream** — read the logs of the service closest to the error, then walk up the chain.
+3. **Find the root cause** — which service raises the original error?
+4. **Fix** — correct it in the right service.
+5. **Verify** — re-test the full chain.
 
-## Patterns d'erreur courants
+## Common error patterns
 
-| Symptome | Cause probable |
-|----------|---------------|
-| 502 Bad Gateway | Service backend down ou timeout |
-| 200 mais contenu HTML | Proxy retourne page 404 avec status 200 |
-| Timeout cascade | Service lent qui bloque toute la chaine |
-| JSON parse error | Reponse non-JSON (HTML, texte brut) |
+| Symptom | Likely cause |
+|---------|--------------|
+| 502 Bad Gateway | Backend service down or timeout |
+| 200 but HTML content | Proxy returns a 404 page with status 200 |
+| Timeout cascade | Slow service blocking the whole chain |
+| JSON parse error | Non-JSON response (HTML, plain text) |
