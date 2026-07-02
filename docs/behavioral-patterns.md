@@ -1,8 +1,8 @@
 # Behavioral Patterns — Ce qui marche vraiment
 
 Guide de reference pour optimiser la collaboration humain-IA en developpement.
-Base sur l'experience reelle (excenia-hub, 15+ feedback memories, 800+ sessions)
-et la recherche sur les assistants de code IA.
+Base sur l'experience reelle (un projet en production, 15+ feedback memories,
+des centaines de sessions) et la recherche sur les assistants de code IA.
 
 ---
 
@@ -125,7 +125,7 @@ Apres 20+ sessions, certaines memoires deviennent obsoletes :
 
 ## Sources
 
-- Experience excenia-hub (15 feedback memories, 800+ sessions, 10+ PRs de remediation)
+- Experience sur un projet en production (15 feedback memories, des centaines de sessions, 10+ PRs de remediation)
 - [Claude Code Memory Docs](https://code.claude.com/docs/en/memory)
 - [Writing a good CLAUDE.md](https://www.builder.io/blog/claude-md-guide)
 - [Best Practices for Claude Code](https://code.claude.com/docs/en/best-practices)

@@ -1,0 +1,13 @@
+# CLoClo runtime state
+.cloclo-disabled
+docs/cloclo-sessions/
+*.runtime.log
+
+# Local environment
+.env.local
+
+# OS / editor
+.DS_Store
+
+# Dependencies
+node_modules/
