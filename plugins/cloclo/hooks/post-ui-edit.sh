@@ -1,33 +1,37 @@
 #!/usr/bin/env bash
-# CLoClo PostToolUse hook — remind about visual verification after UI file edits
-# Fires on Edit/Write tools. Checks if the modified file is a UI file.
-# If yes, injects a reminder to verify with agent-browser.
+# CLoClo PostToolUse hook — remind about visual verification after UI file edits.
+# Fires on Edit/Write tools; only when the edited file is a UI file.
+# Injects a TEXT reminder only — it NEVER spawns agent-browser (no child
+# processes are launched here, so there is nothing to leak).
+#
+# Input: PostToolUse JSON on stdin (fields read via jq: .cwd, .tool_input.file_path).
+# Requires: jq. If jq is missing we exit 0 silently — a hook must never crash a session.
 
-# No set -e: hooks must never crash
+# No set -e: hooks must never exit non-zero
 set -o pipefail 2>/dev/null || true
 
 INPUT=$(cat)
 
-# Kill switch
-PROJECT_DIR_CHECK=$(echo "$INPUT" | python3 -c "import sys,json,os; print(json.load(sys.stdin).get('cwd',os.getcwd()))" 2>/dev/null || pwd)
-[ -f "$PROJECT_DIR_CHECK/.cloclo-disabled" ] && exit 0
+# jq is a hard dependency for JSON parsing; degrade to a silent no-op if absent.
+command -v jq >/dev/null 2>&1 || exit 0
 
-# Extract file path from tool input
-FILE_PATH=$(echo "$INPUT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-tool_input = data.get('tool_input', {})
-if isinstance(tool_input, dict):
-    print(tool_input.get('file_path', ''))
-" 2>/dev/null || echo "")
+# Resolve the project root (robust to a subdirectory cwd).
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(jq -r '.cwd // empty' <<<"$INPUT" 2>/dev/null)}"
+PROJECT_DIR="${PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
-if [ -z "$FILE_PATH" ]; then
-  exit 0
-fi
+# Kill switch anchored at the project root, not cwd.
+[ -f "$PROJECT_DIR/.cloclo-disabled" ] && exit 0
 
-# Check if it's a UI file
-if echo "$FILE_PATH" | grep -qE '\.(tsx|jsx|vue|svelte|html|css|scss)$'; then
-  REMINDER="CLoClo: UI file modified ($FILE_PATH). After you're done with this change, verify visually with agent-browser: open the page, take a screenshot, verify it looks correct."
-  REMINDER_ESCAPED=$(echo "$REMINDER" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
-  printf '{"additionalContext":%s}\n' "$REMINDER_ESCAPED"
-fi
+FILE_PATH=$(jq -r '.tool_input.file_path // empty' <<<"$INPUT" 2>/dev/null)
+[ -n "$FILE_PATH" ] || exit 0
+
+# Canonical UI extension list — kept in sync with session-start.sh rule text:
+#   .tsx .ts .jsx .js .vue .svelte .html .css .scss
+case "$FILE_PATH" in
+  *.tsx|*.ts|*.jsx|*.js|*.vue|*.svelte|*.html|*.css|*.scss)
+    REMINDER="CLoClo: UI file modified ($FILE_PATH). After you're done with this change, verify visually with agent-browser: open the page, take a screenshot, verify it looks correct."
+    printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' \
+      "$(jq -n --arg m "$REMINDER" '$m')"
+    ;;
+esac
+exit 0

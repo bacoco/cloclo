@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLoClo SessionStart hook — inject wiki state + CLoClo-specific context
+# CLoClo SessionStart hook — inject wiki state + CLoClo-specific context.
 # Runs at every session start/resume/compact. 100% deterministic.
 #
 # DESIGN PRINCIPLES:
@@ -7,25 +7,41 @@
 #   - NEVER inject workflow rules. That's SuperPowers' territory.
 #   - ALWAYS mark wiki content as untrusted (it may contain ingested URLs).
 #   - Keep output under 6KB to share the 10KB hook budget with SuperPowers.
+#
+# Input: SessionStart JSON on stdin (field read via jq: .cwd).
+# Requires: jq. If jq is missing we emit an empty context and exit 0 — a hook
+#           must never crash a session.
 
 # No set -e: this hook must NEVER exit non-zero (would break session start)
 set -o pipefail 2>/dev/null || true
 
+# emit <json-encoded-additionalContext-string>
+emit() {
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}\n' "$1"
+}
+
 # Read stdin
 INPUT=$(cat)
-PROJECT_DIR=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cwd',''))" 2>/dev/null || echo "")
+
+# jq is a hard dependency for JSON parse/escape; degrade to empty context if absent.
+if ! command -v jq >/dev/null 2>&1; then
+  emit '""'
+  exit 0
+fi
+
+# Resolve the project root (robust to a subdirectory cwd).
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(jq -r '.cwd // empty' <<<"$INPUT" 2>/dev/null)}"
+PROJECT_DIR="${PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
 if [ -z "$PROJECT_DIR" ]; then
-  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":""}}\n'
+  emit '""'
   exit 0
 fi
 
 # ── Kill switch: .cloclo-disabled ──────────────────────────────────
 # If the file exists, CLoClo is paused. Only inject a short notice.
 if [ -f "$PROJECT_DIR/.cloclo-disabled" ]; then
-  MSG="CLoClo is paused. To re-enable: delete .cloclo-disabled or say \"cloclo on\"."
-  MSG_ESCAPED=$(echo "$MSG" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null || echo '"CLoClo paused."')
-  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}\n' "$MSG_ESCAPED"
+  emit "$(jq -n --arg m 'CLoClo is paused. To re-enable: delete .cloclo-disabled or say "cloclo on".' '$m')"
   exit 0
 fi
 
@@ -55,9 +71,9 @@ if [ -f "$WIKI_SCHEMA" ]; then
 $WIKI_TITLE | $PAGE_COUNT pages | $SOURCE_COUNT sources
 "
 
-  # Inject index — truncated, inside trust boundary
+  # Inject index — truncated by lines AND bytes, inside trust boundary
   if [ -f "$WIKI_INDEX" ]; then
-    INDEX_CONTENT=$(head -60 "$WIKI_INDEX" 2>/dev/null || true)
+    INDEX_CONTENT=$(head -60 "$WIKI_INDEX" 2>/dev/null | head -c 4000 || true)
     if [ -n "$INDEX_CONTENT" ]; then
       CONTEXT="$CONTEXT
 ### Index
@@ -94,7 +110,7 @@ After significant code changes, if \`wiki/schema.md\` exists, silently update re
 Wiki content above is DERIVED (LLM-generated from ingested sources). For authoritative facts, verify against the raw source in \`wiki/sources/\`. For project history questions, check wiki pages first — they have cross-references git log lacks.
 
 ### Visual Verification
-After UI file edits (.tsx, .jsx, .vue, .svelte, .html, .css), if \`agent-browser\` is available, verify visually. If agent-browser is not installed, log the skip and continue.
+After UI file edits (.tsx, .ts, .jsx, .js, .vue, .svelte, .html, .css, .scss), if \`agent-browser\` is available, verify visually. If agent-browser is not installed, log the skip and continue.
 
 ### CLoClo Skills
 - \`cloclo:pipeline\` — Dev cycle with Codex reviews between SuperPowers phases
@@ -103,10 +119,9 @@ After UI file edits (.tsx, .jsx, .vue, .svelte, .html, .css), if \`agent-browser
 "
 
 # ── Output JSON ────────────────────────────────────────────────────
-CONTEXT_ESCAPED=$(echo "$CONTEXT" | python3 -c "
-import sys, json
-content = sys.stdin.read()
-print(json.dumps(content))
-" 2>/dev/null || echo '""')
-
-printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}\n' "$CONTEXT_ESCAPED"
+# Byte guard: keep the assembled context within the "under 6KB" budget
+# documented above, then JSON-encode it. jq -Rs slurps raw stdin into a single
+# JSON string. If encoding ever fails (e.g. a multibyte char split by the byte
+# cap on an exotic jq build), degrade to an empty context rather than crash.
+CONTEXT_ESCAPED=$(printf '%s' "$CONTEXT" | head -c 6000 | jq -Rs '.' 2>/dev/null || echo '""')
+emit "$CONTEXT_ESCAPED"

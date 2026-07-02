@@ -1,46 +1,45 @@
 #!/usr/bin/env bash
-# CLoClo PostToolUse hook — remind to update wiki after git commits
-# Only fires on Bash tool calls containing "git commit".
-# Lightweight: just a context nudge, not a full wiki operation.
+# CLoClo PostToolUse hook — remind to update the wiki after git commits.
+# Fires on Bash tool calls whose command contains "git commit".
+# Lightweight: injects a text nudge only, never runs a real wiki operation.
+#
+# Input: PostToolUse JSON on stdin (fields read via jq: .cwd, .tool_input.command).
+# Requires: jq. If jq is missing we exit 0 silently — a hook must never crash a session.
 
-# No set -e: hooks must never crash
+# No set -e: hooks must never exit non-zero
 set -o pipefail 2>/dev/null || true
 
 INPUT=$(cat)
 
-# Kill switch
-PROJECT_DIR_CHECK=$(echo "$INPUT" | python3 -c "import sys,json,os; print(json.load(sys.stdin).get('cwd',os.getcwd()))" 2>/dev/null || pwd)
-[ -f "$PROJECT_DIR_CHECK/.cloclo-disabled" ] && exit 0
+# jq is a hard dependency for JSON parsing; degrade to a silent no-op if absent.
+command -v jq >/dev/null 2>&1 || exit 0
 
-# Extract command
-COMMAND=$(echo "$INPUT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-tool_input = data.get('tool_input', {})
-if isinstance(tool_input, dict):
-    print(tool_input.get('command', ''))
-elif isinstance(tool_input, str):
-    print(tool_input)
-" 2>/dev/null || echo "")
+# Cheap pre-filter: avoid spawning jq on every Bash call unless the raw input
+# even mentions "git commit". Substring match on the whole JSON blob is fine here.
+case "$INPUT" in
+  *'git commit'*) ;;
+  *) exit 0 ;;
+esac
 
-# Only trigger on git commit
-if ! echo "$COMMAND" | grep -qE 'git commit'; then
-  exit 0
-fi
+# Resolve the project root (robust to a subdirectory cwd).
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(jq -r '.cwd // empty' <<<"$INPUT" 2>/dev/null)}"
+PROJECT_DIR="${PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
-# Find project directory — try cwd from JSON input, then os.getcwd(), then pwd
-PROJECT_DIR=$(echo "$INPUT" | python3 -c "
-import sys, json, os
-data = json.load(sys.stdin)
-print(data.get('cwd', os.getcwd()))
-" 2>/dev/null || pwd)
+# Kill switch anchored at the project root, not cwd.
+[ -f "$PROJECT_DIR/.cloclo-disabled" ] && exit 0
 
-# Try project dir and git root
-for dir in "$PROJECT_DIR" "$(git -C "$PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null)"; do
-  if [ -f "$dir/wiki/schema.md" ] 2>/dev/null; then
-    REMINDER="CLoClo: Commit detected. If this was a significant change, update relevant wiki pages (entities, concepts, decisions)."
-    REMINDER_ESCAPED=$(echo "$REMINDER" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
-    printf '{"additionalContext":%s}\n' "$REMINDER_ESCAPED"
-    exit 0
-  fi
-done
+# Extract the actual command and confirm it is a git commit (not just any string
+# that happened to contain the words elsewhere in the payload).
+COMMAND=$(jq -r '.tool_input.command // empty' <<<"$INPUT" 2>/dev/null)
+case "$COMMAND" in
+  *"git commit"*) ;;
+  *) exit 0 ;;
+esac
+
+# Only nudge when a wiki actually exists at the project root.
+[ -f "$PROJECT_DIR/wiki/schema.md" ] || exit 0
+
+REMINDER="CLoClo: Commit detected. If this was a significant change, update relevant wiki pages (entities, concepts, decisions)."
+printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' \
+  "$(jq -n --arg m "$REMINDER" '$m')"
+exit 0
