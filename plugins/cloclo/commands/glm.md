@@ -7,7 +7,7 @@ allowed-tools: Bash(claude:*), Bash(git:*), Bash(grep:*), Read
 # /glm — Standalone GLM-5.2 Review
 
 Run a GLM-5.2 review on the current repo. Uses the installed `claude` CLI with
-three environment variables overridden so the calls land on Z.ai instead of
+a few environment variables overridden so the calls land on Z.ai instead of
 Anthropic. Useful before opening a PR, after a quick fix, or to sanity-check
 work without entering the full pipeline.
 
@@ -113,6 +113,8 @@ Examples:
    # closes stdin so a non-interactive child can't hang; `timeout 900` caps it.
    ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
    ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
+   ANTHROPIC_MODEL="glm-5.2" \
+   ANTHROPIC_SMALL_FAST_MODEL="glm-5.2" \
    ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
    ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
    ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.2" \

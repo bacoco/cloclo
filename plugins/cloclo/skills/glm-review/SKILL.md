@@ -113,12 +113,15 @@ rm -f "$output_file"
 
 # `< /dev/null` mirrors the codex hang fix: a non-interactive child must have stdin
 # closed or it can block waiting for input. `timeout 900` caps a stuck session at
-# 15 min. The three ANTHROPIC_DEFAULT_*_MODEL vars pin every Claude alias (opus /
-# sonnet / haiku) to glm-5.2 so internal small-model calls don't hit a bad model
-# id. --allowedTools whitelists tools so Write runs without a prompt in headless
+# 15 min. ANTHROPIC_MODEL/SMALL_FAST_MODEL (+ the legacy DEFAULT_*_MODEL trio) pin
+# every model the CLI might request — primary, background summariser, and each
+# Claude alias — to glm-5.2, so no internal call hits a model id Z.ai rejects with
+# 400. --allowedTools whitelists tools so Write runs without a prompt in headless
 # `-p` mode, while blocking arbitrary edits (no general Bash, no repo-wide write).
 ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
 ANTHROPIC_AUTH_TOKEN="$GLM_KEY" \
+ANTHROPIC_MODEL="glm-5.2" \
+ANTHROPIC_SMALL_FAST_MODEL="glm-5.2" \
 ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2" \
 ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2" \
 ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.2" \
@@ -140,7 +143,7 @@ call — a single file contract regardless of which reviewer produced it.
 
 - `ANTHROPIC_BASE_URL` redirects the CLI's HTTP calls to Z.ai's Anthropic-compatible endpoint.
 - `ANTHROPIC_AUTH_TOKEN` is sent as the `x-api-key` / `authorization` header — Z.ai accepts its own key there.
-- `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL` force every Claude alias the CLI might request to `glm-5.2`. Setting all three (per Z.ai's own guidance) catches internal small-model calls that would otherwise hit a nonexistent Anthropic model id.
+- `ANTHROPIC_MODEL` + `ANTHROPIC_SMALL_FAST_MODEL` pin the CLI's primary and background/summariser models to `glm-5.2`. **Required on recent Claude CLIs (≥2.1):** without them the CLI sends its own model id (a Claude alias) and Z.ai answers `400 Unknown Model`. The `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU}_MODEL` trio is kept for older CLIs but is not sufficient on its own.
 - **Only the child process inherits these vars.** The parent Claude Code session keeps its real Anthropic auth. Codex CLI, CodeRabbit CLI, and other tooling are unaffected.
 
 ### Result check (mandatory post-run guard)
