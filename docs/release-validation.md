@@ -16,6 +16,7 @@ Candidate branch: `agent/unified-companions`
 | Codex skill validator for `$glm` | PASS |
 | isolated Claude marketplace install | PASS; `cloclo` installed `glm` as its dependency |
 | local Codex marketplace install | PASS; `claude@cloclo` and `glm@cloclo` installed |
+| GitHub Actions `Validate companions` | PASS on draft PR #7 |
 
 The repository CI runs Python compilation plus all distribution, adapter,
 Claude Companion, and GLM Companion regression suites. The local campaign
@@ -86,8 +87,8 @@ concurrent prune cannot remove a newly created job file.
 - **Known knowns:** both marketplace schemas validate, all four live delegation
   directions work, the provider probe authenticates, context is redacted, and
   the local regression campaign passes.
-- **Known unknowns:** GitHub-hosted CI and remote branch installation cannot be
-  observed until the branch is pushed; provider quota/rate-limit state remains
+- **Known unknowns:** installation from the repository's default branch cannot
+  be observed until the PR merges; provider quota/rate-limit state remains
   external and variable.
 - **Unknown knowns surfaced:** Claude dependencies are installed automatically;
   marketplace binaries are not assumed to be globally on `PATH`; GLM resume
@@ -130,5 +131,5 @@ review passes recorded above.
 ## Release boundary
 
 This validation does not change provider accounts, quotas, subscriptions, or
-secret files. It does not merge the pull request. Publishing consists of a
-feature-branch push and a draft pull request for final GitHub review.
+secret files. The feature branch is published in draft PR #7 and GitHub Actions
+passes; the validation does not merge the pull request.
