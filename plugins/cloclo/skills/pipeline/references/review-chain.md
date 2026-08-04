@@ -33,7 +33,7 @@ handled on failure. Every reviewer CLI call runs with `< /dev/null` and
 | Reviewer | Availability check | Timeout | Retries | On exhaustion | Fallback | Skip-semantics | Log line |
 |----------|--------------------|---------|---------|---------------|----------|----------------|----------|
 | `codex-review` (Codex CLI) | `codex --version` succeeds | 900 s | 2 | dispatch fallback | Claude subagent — `general-purpose`, or `superpowers:code-reviewer` **only if** present in the running session's available agent types | never silently skipped; falls back | `Phase N codex: fell back to Claude subagent` |
-| `glm-review` (GLM-5.2 via Z.ai) | key resolves (`ZAI_API_KEY` → `GLM_API_KEY`, optionally a project `.env`) AND call succeeds | 900 s | 2 | skip | none | missing key or failure → skipped with a logged warning | `Phase N glm: skipped (no key / failed)` |
+| `glm-review` (GLM Companion via Z.ai) | the adapter resolves `GLM_COMPANION_BIN` → `PATH` → repository sibling → Claude plugin cache, the key resolves (`~/.glm.env` → process `ZAI_API_KEY` / `GLM_API_KEY` → project `.env`), and the call succeeds | 900 s | 2 | skip | provider model fallback: `glm-5.2` → `glm-4.7` on rate limits | missing key or failure of both provider models → skipped with a logged warning | `Phase N glm: skipped (no key / failed)` |
 | `coderabbit-review` (CodeRabbit CLI) | `command -v coderabbit` AND guard passes | 900 s | 2 | skip | none | failure or unavailable → skipped with a warning, non-blocking | `Phase N coderabbit: skipped (unavailable)` |
 
 A phase is fully skipped only when **all** of its reviewers are

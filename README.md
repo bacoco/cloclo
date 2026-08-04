@@ -1,127 +1,184 @@
-# CLoClo — Code Loop Orchestrator: Claude + Codex + GLM + CodeRabbit + Gemini (Codex Cloud opt-in)
+# CLoClo — Claude ↔ Codex ↔ GLM
 
-A Claude Code plugin that works invisibly. You code normally — CLoClo handles the rest:
+CLoClo is a dual marketplace and development orchestrator. It gives Codex access
+to Claude and GLM, gives Claude Code access to Codex and GLM, and keeps the
+existing multi-review development pipeline, project bootstrap, hooks, and wiki.
 
-- **Claude generates; Codex + GLM verify.** Two independent frontier models review your specs, plans, and code in parallel between each development phase — with a consensus matrix for agreement/disagreement.
-- **CodeRabbit runs static analysis** on every implementation, and Gemini Code Assist reviews the PR.
-- **A persistent wiki compounds your project knowledge** with every change you make.
-- **UI changes get visual verification** automatically via agent-browser.
+## Companion matrix
 
-You never need to call a command. CLoClo detects what you're doing and acts — findings are auto-integrated under guardrails, and the pipeline only escalates on genuine blockers. Or use `/coderabbit` / `/glm` for a standalone review.
+| Host | Delegate to | Distribution | Primary invocation |
+|---|---|---|---|
+| Codex | Claude Code | `claude@cloclo` | `$claude` |
+| Codex | GLM through Z.AI | `glm@cloclo` | `$glm` |
+| Claude Code | Codex | `codex@openai-codex` | `/codex:rescue` and `/codex:*` |
+| Claude Code | GLM through Z.AI | `glm@cloclo` | `/glm:glm` |
 
-**GLM-5.2 is optional.** Set `ZAI_API_KEY` or `GLM_API_KEY` in your shell. Missing key = silent skip; Codex still reviews every phase alone.
+The Claude Code plugin system namespaces marketplace commands. A personal
+`~/.claude/commands/glm.md` alias may expose `/glm`, but the portable marketplace
+name is `/glm:glm`. CLoClo also keeps `/cloclo:glm` as a compatibility route.
 
-## Installation
+## Install the complete suite
 
-The canonical two-step flow in Claude Code:
+### Claude Code
+
+Keep the Codex companion on its official OpenAI update channel and install
+CLoClo plus GLM from this marketplace:
 
 ```bash
+claude plugin marketplace add openai/codex-plugin-cc
 claude plugin marketplace add bacoco/cloclo
+claude plugin install codex@openai-codex
 claude plugin install cloclo@cloclo
 ```
 
-Restart when prompted. CLoClo is now active on every session.
+`cloclo@cloclo` declares `glm@cloclo` as a dependency, so Claude installs GLM
+with it. Run `/reload-plugins` or start a new Claude Code session.
 
-Prefer conversational install? Just tell Claude Code:
+### Codex
 
-```
-Install the CLoClo plugin from marketplace bacoco/cloclo on GitHub
-```
-
-## What's inside
-
-CLoClo ships **8 skills**, **2 slash commands**, and **3 always-on hooks**. Almost everything runs automatically — you rarely call a skill by name.
-
-### Skills
-
-| Skill | What it does | When to call explicitly |
-|-------|--------------|-------------------------|
-| `cloclo:pipeline` | Full dev cycle (design → review → plan → review → execute → review → verify → PR → auto-merge) | Almost never — CLoClo detects feature requests |
-| `cloclo:wiki` | Persistent LLM wiki: init, ingest, query, lint | `/wiki lint` for health checks, `/wiki ingest <file>` for manual sources |
-| `cloclo:bootstrap` | First-time project setup (CLAUDE.md, hooks, memory, skills, wiki) | Almost never — offered on first session |
-| `cloclo:rollback` | Undo pipeline work — soft (uncommit) or hard (revert) | When you need to undo a pipeline run |
-| `cloclo:toggle` | Turn CLoClo on/off/status (creates or removes `.cloclo-disabled`) | `cloclo off` / `cloclo on` / `cloclo status` |
-| `cloclo:codex-review` | Codex CLI review of a spec, plan, or impl (Claude subagent fallback) | Almost never — pipeline calls it |
-| `cloclo:glm-review` | GLM-5.2 review via Z.ai Anthropic-compatible endpoint (no fallback) | Almost never — pipeline calls it |
-| `cloclo:coderabbit-review` | Local CodeRabbit CLI review of a git diff | Almost never — pipeline calls it |
-
-### Commands
-
-| Command | What it does |
-|---------|--------------|
-| `/coderabbit` | Standalone CodeRabbit CLI review of current changes (committed or uncommitted) |
-| `/glm` | Standalone GLM-5.2 review of current changes via Z.ai |
-
-### Hooks
-
-| Hook | When | What it does |
-|------|------|--------------|
-| SessionStart (`session-start.sh`) | Every session opens | Injects wiki state into Claude's context (or a single "paused" line when disabled) |
-| PostToolUse commit (`post-commit.sh`) | After `git commit` | Nudges Claude to update relevant wiki pages |
-| PostToolUse UI edit (`post-ui-edit.sh`) | After editing `.tsx/.vue/.css/...` | Reminds Claude to verify with agent-browser |
-
-## How the pipeline works
-
-You describe a feature; CLoClo runs a structured cycle. Claude generates each artifact, independent reviewers verify it, findings auto-integrate under guardrails, and the loop only stops to ask you when confidence is genuinely low.
-
-```
-Design (brainstorm)  ─►  spec
-    └─ Codex + GLM review the spec (parallel)  ─► auto-integrate
-Plan                 ─►  implementation plan
-    └─ Codex + GLM review the plan (parallel)  ─► auto-integrate
-Execute              ─►  commits (fresh subagent per task, bounded retries)
-    └─ Codex + GLM review the diff + CodeRabbit static analysis  ─► auto-integrate
-Verify               ─►  evidence (commands run, AC compliance)
-    └─ If UI touched: agent-browser screenshots + verify
-Wiki ingest          ─►  session decisions folded into the wiki
-Open PR              ─►  installed bots review → auto-apply patches → auto-merge
+```bash
+codex plugin marketplace add bacoco/cloclo
+codex plugin add claude@cloclo
+codex plugin add glm@cloclo
 ```
 
-**Decision model — auto-integration.** Only the design phase requires your input; that's where intent lives. Every review phase auto-applies findings under three gates and only escalates in the terminal (never on GitHub) on a genuine blocker:
+Start a new Codex session after installation so `$claude` and `$glm` are loaded.
 
-1. The reviewer gives a concrete revision or patch — not just "consider X".
-2. It's not a design pivot and not in auth / payments / data-migration.
-3. No contradiction between reviewers at the same location.
+## One feature contract
 
-Escalation triggers: design pivot, critical-domain touch, cross-reviewer conflict, iteration cap hit (3 rounds), or a patch that failed to apply. A **confidence-first** rule runs everywhere: if confidence on any decision drops below 95%, the pipeline asks one question with 2-3 concrete options instead of guessing.
+The Claude and GLM companions intentionally expose the same lifecycle:
 
-**Reviewers.** Claude generates the work. Codex CLI (OS-level read-only sandbox), GLM-5.2 (Z.ai), CodeRabbit CLI, and — on the PR — Gemini Code Assist verify it. Codex Cloud is opt-in (`/pipeline avec codex cloud` or `bots.codex_cloud: true`) since Phases 2/4/6 already run Codex against the same code.
+- fresh delegated tasks with visible host-conversation context;
+- explicit read-only or write-capable execution;
+- foreground and background jobs;
+- resumable model sessions;
+- conversation transfer;
+- normal and adversarial reviews;
+- setup, status, result, wait, and cancellation;
+- recursion protection and optional fail-open stop-review gates.
 
-The pipeline reference files are the single source of truth for the details:
+Claude → Codex uses OpenAI's official companion, which provides the corresponding
+task, transfer, review, job-control, and setup commands. CLoClo does not fork or
+vendor the OpenAI plugin.
 
-- [Phases](plugins/cloclo/skills/pipeline/references/phases.md) — every phase end-to-end
-- [Model policy](plugins/cloclo/skills/pipeline/references/model-policy.md) — which model runs each role
-- [Review chain](plugins/cloclo/skills/pipeline/references/review-chain.md) — Codex / GLM / CodeRabbit interplay, consensus matrix
-- [Confidence-first](plugins/cloclo/skills/pipeline/references/confidence-first.md) — when the loop stops to ask
-- [Smart-resume](plugins/cloclo/skills/pipeline/references/smart-resume.md) — re-entering a session mid-pipeline
-- [Bot stack](plugins/cloclo/skills/pipeline/references/bot-stack.md) — PR bots, defaults vs opt-in
-- [Session files](plugins/cloclo/skills/pipeline/references/session-files.md), [retries](plugins/cloclo/skills/pipeline/references/retries.md), [prerequisites](plugins/cloclo/skills/pipeline/references/prerequisites.md)
+## Quick use
 
-## The wiki
+From Codex:
 
-An LLM-maintained knowledge base (based on [Karpathy's LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)) that grows from pipeline sessions and commits. Claude does the bookkeeping — you curate sources and ask questions. Graph-traversal queries walk the `[[wiki-link]]` graph, frequent multi-page answers get cached as synthesis pages, and every write is PII-scanned. See the [`cloclo:wiki`](plugins/cloclo/skills/wiki/SKILL.md) skill.
-
-## First-time setup
-
-On the first session in a new project, `cloclo:bootstrap` offers to set up a `CLAUDE.md` adapted to your stack, mechanical hooks, seven behavioral-pattern memories, a wiki scaffold, and skills adapted to your services. It happens once; after that everything is automatic. See [`cloclo:bootstrap`](plugins/cloclo/skills/bootstrap/SKILL.md).
-
-## Pause / resume
-
-```
-cloclo off        # creates .cloclo-disabled — all hooks go silent
-cloclo on         # removes it — CLoClo resumes
-cloclo status     # report current state
+```text
+$claude investigate this failure
+$claude implement the fix and verify it
+$claude transfer this conversation
+$glm review the current branch
+$glm continue
 ```
 
-Or just tell Claude "pause CLoClo" / "resume CLoClo". When paused, SessionStart injects a single "CLoClo is paused" line; your wiki, skills, and session files stay untouched. See [`cloclo:toggle`](plugins/cloclo/skills/toggle/SKILL.md).
+From Claude Code:
 
-## Coexistence with SuperPowers
+```text
+/codex:rescue investigate this failure
+/codex:review
+/codex:transfer
+/glm:glm review the current branch
+/glm:glm continue
+```
 
-CLoClo complements [SuperPowers](https://github.com/obra/superpowers) — it never duplicates or overrides. SuperPowers owns the workflow (brainstorming, planning, execution, verification); CLoClo adds the review layer (Codex + GLM), the static-analysis layer (CodeRabbit), the knowledge layer (wiki), and the visual layer ([agent-browser](https://github.com/vercel-labs/agent-browser)). Both SessionStart hooks run and concatenate — no conflict.
+## GLM setup
 
-## Behavioral patterns
+GLM uses the Z.AI Anthropic-compatible endpoint through the installed Claude Code
+CLI. Store the key in a user-owned file with mode `0600`:
 
-Bootstrap seeds 7 behavioral patterns validated by real-world experience: verify before writing, test after change, diagnostic sequence, execute don't plan, never remove features, no speculation, and commit checkpoints. Key insight: **hooks that block > rules in CLAUDE.md > passive memory**. See [`docs/behavioral-patterns.md`](docs/behavioral-patterns.md).
+```bash
+printf 'ZAI_API_KEY="replace-me"\n' > ~/.glm.env
+chmod 600 ~/.glm.env
+```
+
+Key lookup order is:
+
+1. `~/.glm.env`
+2. `ZAI_API_KEY` or `GLM_API_KEY` from the process environment
+3. the same keys in the workspace `.env`
+
+The runtime prefers `glm-5.2`. If Z.AI rate-limits that model, it retries once
+with `glm-4.7` and reports the fallback in the result. It never prints the key or
+writes provider credentials into Claude settings.
+
+Run setup checks with `$glm setup` in Codex or `/glm:glm setup` in Claude Code.
+
+## CLoClo development pipeline
+
+The `cloclo:pipeline` skill remains Claude-first:
+
+```text
+Design → Codex + GLM review → Plan → Codex + GLM review
+       → Execute → Codex + GLM + CodeRabbit review
+       → Verify → Wiki → PR bots → Merge → post-merge GLM review
+```
+
+GLM pipeline reviews use the canonical `glm@cloclo` runtime. CLoClo no longer
+contains a second direct Z.AI transport. The adapter preserves the existing
+review-file, severity, consensus, retry, and escalation contracts.
+
+The pipeline also includes:
+
+- project bootstrap with `CLAUDE.md`, hooks, behavioral memories, and skills;
+- checkpointed sessions and smart resume;
+- confidence-first questions instead of low-confidence guesses;
+- optional CodeRabbit, Gemini, Codex Cloud, and visual verification;
+- a persistent, PII-scanned project wiki;
+- guarded rollback and pause/resume controls.
+
+## Repository layout
+
+```text
+.claude-plugin/marketplace.json       Claude Code marketplace
+.agents/plugins/marketplace.json      Codex marketplace
+plugins/cloclo/                       Claude-first orchestration plugin
+plugins/claude/                       Claude Companion for Codex
+plugins/glm/                          GLM Companion for Claude and Codex
+docs/unified-companions-plan.md       architecture and acceptance contract
+docs/companion-reference.md           commands, configuration, and operations
+```
+
+Each companion plugin is self-contained because marketplace installers copy
+plugin roots into versioned caches. CLoClo's adapter resolves GLM from the
+declared marketplace dependency, from a repository sibling during development,
+or from an explicit `GLM_COMPANION_BIN` override.
+
+## Security boundaries
+
+- Visible user/assistant messages may be transferred; hidden instructions,
+  private reasoning, raw tool traces, and attachments are excluded. Known
+  provider-token forms are deterministically replaced with
+  `[REDACTED_SECRET]` before delegation.
+- Read-only work denies edit tools and uses an OS sandbox where available.
+- Write permission is enabled only for explicit mutation requests.
+- Delegated workers cannot delegate back to the originating model.
+- Provider variables exist only in the child GLM process.
+- Stop-review gates fail open on infrastructure failure and are disabled by
+  default.
+- No API key, `.env`, job state, or runtime log belongs in git.
+
+## Documentation
+
+- [Unified companion plan](docs/unified-companions-plan.md)
+- [Companion command and operations reference](docs/companion-reference.md)
+- [Release validation evidence](docs/release-validation.md)
+- [Pipeline phases](plugins/cloclo/skills/pipeline/references/phases.md)
+- [Review chain](plugins/cloclo/skills/pipeline/references/review-chain.md)
+- [Behavioral patterns](docs/behavioral-patterns.md)
+
+## Validate locally
+
+```bash
+claude plugin validate .
+python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/claude
+python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/glm
+python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s plugins/cloclo/tests -v
+python3 -m unittest discover -s plugins/claude/tests -v
+python3 -m unittest discover -s plugins/glm/tests -v
+```
 
 ## License
 

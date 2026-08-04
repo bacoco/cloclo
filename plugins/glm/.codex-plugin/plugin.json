@@ -1,0 +1,38 @@
+{
+  "name": "glm",
+  "version": "1.0.0",
+  "description": "Use GLM 5.2 from Codex and Claude as a resumable coding and review companion.",
+  "author": {
+    "name": "Loic Baconnier",
+    "url": "https://github.com/bacoco"
+  },
+  "homepage": "https://github.com/bacoco/cloclo#glm-companion-for-claude-and-codex",
+  "repository": "https://github.com/bacoco/cloclo",
+  "license": "MIT",
+  "keywords": [
+    "glm",
+    "zai",
+    "delegation",
+    "review",
+    "background-jobs"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "GLM Companion",
+    "shortDescription": "Delegate complete work to GLM 5.2",
+    "longDescription": "GLM Companion gives Codex and Claude one shared GLM 5.2 worker with visible-session context, resumable foreground and background tasks, review modes, permission boundaries, job control, and optional stop review gates.",
+    "developerName": "Loic Baconnier",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Ask GLM to investigate this problem.",
+      "Transfer this conversation to GLM.",
+      "Run a GLM review in the background."
+    ],
+    "brandColor": "#2F6BFF",
+    "screenshots": []
+  }
+}

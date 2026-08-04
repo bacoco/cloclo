@@ -47,7 +47,11 @@ directive vocabulary: `references/smart-resume.md`.
 | 9 | Open PR + multi-bot auto-integrate + auto-merge | `superpowers:finishing-a-development-branch` | PR URL, merged, branch deleted |
 | 9.5 | Post-merge GLM review (safety net) | `glm-review` (impl) | `11-glm-post-merge-review.md` |
 
-Full per-phase execution: `references/phases.md`. GLM runs only when a Z.ai API key is available (`ZAI_API_KEY` → `GLM_API_KEY`, optionally read from a project `.env`). Missing key = skipped with a logged warning; Codex alone covers the review.
+Full per-phase execution: `references/phases.md`. GLM runs through the shared
+`glm-companion` runtime. It resolves a Z.ai key from `~/.glm.env`, then
+`ZAI_API_KEY` / `GLM_API_KEY`, then the project `.env`. Missing key or failure
+of both the preferred and fallback models = skipped with a logged warning;
+Codex alone covers the review.
 
 ## Step 0: Toggle Check
 
@@ -116,9 +120,9 @@ bot has posted, max 10 min; re-review iterations max 5 min — see
 `references/review-chain.md`), auto-applies their concrete patches
 under the 3 gates, re-reviews, and auto-merges with `--delete-branch`
 when clean. The user stays in the terminal. When a
-Z.ai API key is available, Phase 9.5 runs a final GLM-5.2 pass on the
-post-merge HEAD — an independent safety net, non-blocking for P1/P2,
-auto-escalates P0.
+Z.ai API key is available, Phase 9.5 runs a final GLM pass on the post-merge
+HEAD — preferring `glm-5.2` and reporting any explicit `glm-4.7` fallback.
+It is an independent safety net, non-blocking for P1/P2, and auto-escalates P0.
 
 **Default bots** (no extra config once installed): CodeRabbit GitHub App
 + Gemini Code Assist. **Opt-in:** Codex Cloud, Claude Code Action. Full

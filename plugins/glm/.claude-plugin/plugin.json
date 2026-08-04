@@ -1,0 +1,11 @@
+{
+  "name": "glm",
+  "version": "1.0.0",
+  "description": "Use GLM 5.2 from Claude Code for complete delegated tasks and reviews.",
+  "author": {
+    "name": "Loic Baconnier"
+  },
+  "homepage": "https://github.com/bacoco/cloclo#glm-companion-for-claude-and-codex",
+  "repository": "https://github.com/bacoco/cloclo",
+  "license": "MIT"
+}

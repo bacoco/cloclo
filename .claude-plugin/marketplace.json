@@ -4,18 +4,27 @@
     "name": "Loic Baconnier"
   },
   "metadata": {
-    "description": "CLoClo — Code Loop Orchestrator: Claude + Codex + GLM + CodeRabbit + Gemini (Codex Cloud opt-in). Dev pipeline + project bootstrap + LLM wiki + behavioral patterns for Claude Code.",
-    "version": "0.9.0"
+    "description": "CLoClo — one marketplace for Claude, Codex, and GLM delegation plus the Claude Code development pipeline.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "cloclo",
-      "description": "CLoClo — Code Loop Orchestrator: Claude + Codex + GLM + CodeRabbit + Gemini (Codex Cloud opt-in). Dev pipeline + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki + behavioral patterns.",
-      "version": "0.9.0",
+      "description": "Claude Code orchestration with Codex and GLM review, project bootstrap, hooks, pipeline, and wiki.",
+      "version": "1.0.0",
       "author": {
         "name": "Loic Baconnier"
       },
       "source": "./plugins/cloclo"
+    },
+    {
+      "name": "glm",
+      "description": "Delegate tasks, reviews, and conversation context from Claude Code to GLM through Z.AI.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Loic Baconnier"
+      },
+      "source": "./plugins/glm"
     }
   ]
 }

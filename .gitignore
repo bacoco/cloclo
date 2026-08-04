@@ -4,7 +4,15 @@ docs/cloclo-sessions/
 *.runtime.log
 
 # Local environment
+.env
 .env.local
+.glm.env
+
+# Python and companion state
+__pycache__/
+*.py[cod]
+.claude-companion/
+.glm-companion/
 
 # OS / editor
 .DS_Store

@@ -1,0 +1,29 @@
+{
+  "name": "claude",
+  "version": "1.0.0",
+  "description": "Use Claude Code from Codex to delegate tasks, transfer context, review code, and manage background jobs.",
+  "author": {
+    "name": "Loic Baconnier",
+    "url": "https://github.com/bacoco"
+  },
+  "homepage": "https://github.com/bacoco/cloclo#claude-companion-for-codex",
+  "repository": "https://github.com/bacoco/cloclo",
+  "license": "MIT",
+  "keywords": ["claude", "delegation", "code-review", "background-jobs", "context-transfer"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Claude Companion",
+    "shortDescription": "Delegate work and reviews from Codex to Claude Code",
+    "longDescription": "Claude Companion gives Codex a resumable Claude Code worker with visible-thread context transfer, foreground and background execution, review modes, persistent status and results, cancellation, permission boundaries, and an optional stop-time review gate.",
+    "developerName": "Loic Baconnier",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Ask Claude to investigate this problem.",
+      "Transfer this Codex thread to Claude.",
+      "Run a Claude review in the background."
+    ],
+    "brandColor": "#D97757",
+    "screenshots": []
+  }
+}

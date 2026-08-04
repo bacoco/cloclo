@@ -1,0 +1,4 @@
+interface:
+  display_name: "Claude"
+  short_description: "Utiliser Claude Code depuis Codex"
+  default_prompt: "Utilise $claude pour confier ce travail à Claude."
