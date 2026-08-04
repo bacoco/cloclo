@@ -1,0 +1,16 @@
+{
+  "description": "Optional stop-time Claude review gate for Codex.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/stop_review_gate.py\"",
+            "timeout": 900
+          }
+        ]
+      }
+    ]
+  }
+}

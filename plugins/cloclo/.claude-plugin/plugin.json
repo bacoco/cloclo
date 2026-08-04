@@ -1,9 +1,12 @@
 {
   "name": "cloclo",
-  "version": "0.9.0",
-  "description": "CLoClo — Code Loop Orchestrator: Claude + Codex + GLM + CodeRabbit + Gemini (Codex Cloud opt-in). Dev pipeline + project bootstrap (CLAUDE.md, hooks, memory, skills, wiki) + LLM wiki + behavioral patterns for Claude Code.",
+  "version": "1.0.0",
+  "description": "CLoClo — Claude Code orchestration with Codex and GLM companions, review pipeline, project bootstrap, hooks, and wiki.",
   "author": {
     "name": "Loic Baconnier"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": [
+    "glm"
+  ]
 }

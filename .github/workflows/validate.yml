@@ -1,0 +1,28 @@
+name: Validate companions
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python sources
+        run: python -m compileall -q plugins tests
+      - name: Validate distribution contracts
+        run: python -m unittest discover -s tests -v
+      - name: Test CLoClo adapter
+        run: python -m unittest discover -s plugins/cloclo/tests -v
+      - name: Test Claude Companion
+        run: python -m unittest discover -s plugins/claude/tests -v
+      - name: Test GLM Companion
+        run: python -m unittest discover -s plugins/glm/tests -v

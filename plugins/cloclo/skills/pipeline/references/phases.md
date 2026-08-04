@@ -26,12 +26,13 @@ consensus and 3-gate rules in `review-chain.md`.
   - `input_file`: `{session_dir}/01-spec.md`
   - `output_file`: `{session_dir}/02-codex-review-spec.md`
 
-**GLM-5.2 (parallel, via Z.ai Anthropic-compatible endpoint):**
+**GLM Companion (parallel, via Z.ai Anthropic-compatible endpoint):**
 - Invoke `glm-review` skill with the same parameters but:
   - `output_file`: `{session_dir}/02-glm-review-spec.md`
 
 **Parallel dispatch pattern:** run the two reviewer CLIs (Codex's
-`codex exec` and GLM's `claude -p`) as parallel background Bash jobs,
+`codex exec` and the `glm-review` adapter backed by `glm-companion`) as
+parallel background Bash jobs,
 with each review skill's logic inlined (its command, `< /dev/null`,
 `timeout 900`, `output_file`, and post-run guard — see
 `review-chain.md`). Launch both, then wait for both to exit before
@@ -42,7 +43,10 @@ slower model, not the sum).
 
 **Availability gates:**
 - Codex unavailable (CLI missing, usage limit) → its built-in Claude fallback runs. Never skipped silently.
-- GLM unavailable (no Z.ai key, API down) → **skipped with warning**, no fallback. Codex still produces a review, so the phase still has ≥1 opinion.
+- GLM unavailable (no Z.ai key, or both `glm-5.2` and its configured
+  fallback fail) → **skipped with warning**. A rate-limit on the preferred
+  model first triggers the runtime's explicit `glm-4.7` fallback. Codex still
+  produces a review, so the phase still has ≥1 opinion.
 - Both unavailable → log warning, proceed to next phase without review. This is the only case where Phase 2 actually skips entirely.
 
 **Auto-Integration:**
@@ -527,7 +531,8 @@ to the GitHub UI.
 
 ## Phase 9.5: Post-Merge GLM Review (Safety Net)
 
-Runs only when `glm-review` is available (Z.ai key present). Fires **after** the
+Runs only when `glm-review` is available (Z.ai key present and
+`glm-companion` ready). Fires **after** the
 squash-merge of Phase 9 has landed on `main`. Catches two classes of problems the
 PR review loop can miss:
 
@@ -573,7 +578,10 @@ Non-blocking by default. GLM findings on post-merge HEAD are written to
 A 4th independent model pass after the PR merges is cheap relative to the
 regressions it catches — rare-but-real bugs that slip through the multi-bot
 PR loop. If the Z.ai key is missing, the phase is a no-op skipped with a
-logged warning (same skip semantics as Phase 2/4/6 GLM dispatch).
+logged warning. If the preferred model is rate-limited, the shared runtime
+tries its configured fallback and records the actual model in the runtime log.
+The phase uses the same skip semantics as Phase 2/4/6 only if both attempts
+fail.
 
 ### Skip Conditions
 

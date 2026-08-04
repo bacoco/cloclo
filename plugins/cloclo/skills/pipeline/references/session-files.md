@@ -8,7 +8,7 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 ├── 02-codex-review-spec.md         ← from codex-review skill
 ├── 02-glm-review-spec.md           ← from glm-review skill (parallel with Codex)
 ├── 02-codex-review-spec.md.runtime.log  ← stderr from codex exec
-├── 02-glm-review-spec.md.runtime.log    ← stderr from claude -p (GLM)
+├── 02-glm-review-spec.md.runtime.log    ← GLM Companion model/fallback diagnostics
 ├── 03-spec-v2.md                   ← if corrections after review
 ├── 04-plan.md                      ← from superpowers:writing-plans
 ├── 05-codex-review-plan.md         ← from codex-review skill
@@ -34,7 +34,14 @@ docs/cloclo-sessions/YYYY-MM-DD-<slug>/
 └── pipeline.config.md              ← optional verification config
 ```
 
-**Runtime logs**: every reviewer (codex-review, glm-review, coderabbit-review) writes its process stderr to `{output_file}.runtime.log` — a sibling of the review `.md` file. This is the ONE runtime-log naming convention (there is no separate `0X-codex.runtime.log` form). The review content itself lives in the `.md` file. If a review fails (empty file), the runtime log is the first place to look for diagnostics.
+**Runtime logs**: every reviewer (codex-review, glm-review, coderabbit-review)
+writes diagnostics to `{output_file}.runtime.log` — a sibling of the review
+`.md` file. For GLM this includes the actual model, fallback source, transport
+diagnostics, and raw structured runtime output; the API key is never logged.
+This is the ONE runtime-log naming convention (there is no separate
+`0X-codex.runtime.log` form). The review content itself lives in the `.md`
+file. If a review fails (empty file), the runtime log is the first place to
+look for diagnostics.
 
 ## Session Log Format
 

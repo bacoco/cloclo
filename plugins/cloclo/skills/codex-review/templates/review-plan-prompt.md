@@ -3,7 +3,7 @@
 Ta mission se termine SEULEMENT quand le fichier {{OUTPUT_PATH}} contient ta review en markdown. Deux mecanismes selon ton runtime :
 
 - **Si tu tournes sous Codex `exec -s read-only -o`** : le sandbox OS bloque tous les write tools (by design, c'est read-only). Ton DERNIER message agent est capture automatiquement vers {{OUTPUT_PATH}} par le flag `-o`. Emets donc la review complete en markdown comme ta reponse finale agent.
-- **Si tu as un tool Write/Edit disponible (ex: Claude, ou GLM via `claude -p` avec le tool Write autorise)** : APPELLE Write sur {{OUTPUT_PATH}} avec le markdown complet AVANT de conclure. Le markdown qui reste dans ta reponse conversation sans ecriture fichier est perdu.
+- **Si tu as un tool Write/Edit disponible** : APPELLE Write sur {{OUTPUT_PATH}} avec le markdown complet AVANT de conclure. Le markdown qui reste dans ta reponse conversation sans ecriture fichier est perdu.
 
 Un fichier {{OUTPUT_PATH}} vide ou manquant = echec total du review, peu importe la qualite de ton analyse interne.
 
