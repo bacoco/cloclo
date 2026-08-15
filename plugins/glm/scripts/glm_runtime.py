@@ -23,7 +23,7 @@ from glm_state import state_root, workspace_root
 ZAI_BASE_URL = "https://api.z.ai/api/anthropic"
 ZAI_MODELS_URL = "https://api.z.ai/api/coding/paas/v4/models"
 DEFAULT_MODEL = "glm-5.3"
-FALLBACK_MODEL = "glm-5.2"
+FALLBACK_MODEL = "glm-4.7"
 DEFAULT_HAIKU_MODEL = "glm-4.7"
 DEPTH_ENV = "GLM_COMPANION_DEPTH"
 READ_ONLY_TOOLS = "Read,Grep,Glob,Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(git show:*),Bash(rg:*),Bash(ls:*)"
@@ -99,12 +99,13 @@ def probe_provider(cwd: str | Path, model: str, timeout: float = 20) -> dict[str
             if isinstance(item, dict) and item.get("id")
         }
         base_model = model.removesuffix("[1m]")
+        warning = None
         if available and base_model not in available:
-            return {
-                "reachable": False,
-                "error": {"type": "unknown_model", "message": f"Model {base_model} is not available for this key."},
+            warning = {
+                "type": "model_not_listed",
+                "message": f"Model {base_model} is absent from the provider catalog; a live call remains authoritative.",
             }
-        return {"reachable": True, "error": None}
+        return {"reachable": True, "error": None, "warning": warning}
     except urllib.error.HTTPError as exc:
         try:
             payload = json.loads(exc.read().decode("utf-8", errors="replace"))

@@ -44,7 +44,7 @@ Add `--iterate` only when requested. Omit arguments that do not apply.
 - Read the review from `output_file`. Runtime diagnostics live at
   `${output_file}.runtime.log`.
 - Record the actual engine. The runtime prefers `glm-5.3` and may explicitly
-  report a `glm-5.2` fallback when Z.AI rate-limits the preferred model.
+  report a `glm-4.7` fallback when Z.AI rate-limits the preferred model.
 
 The adapter is the only component allowed to translate GLM output into the
 pipeline review-file contract. Preserve the consensus, severity, escalation,

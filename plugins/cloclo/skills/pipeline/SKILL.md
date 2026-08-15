@@ -121,7 +121,7 @@ bot has posted, max 10 min; re-review iterations max 5 min — see
 under the 3 gates, re-reviews, and auto-merges with `--delete-branch`
 when clean. The user stays in the terminal. When a
 Z.ai API key is available, Phase 9.5 runs a final GLM pass on the post-merge
-HEAD — preferring `glm-5.3` and reporting any explicit `glm-5.2` fallback.
+HEAD — preferring `glm-5.3` and reporting any explicit `glm-4.7` fallback.
 It is an independent safety net, non-blocking for P1/P2, and auto-escalates P0.
 
 **Default bots** (no extra config once installed): CodeRabbit GitHub App

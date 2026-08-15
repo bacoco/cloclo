@@ -38,7 +38,7 @@ If the user writes only `$glm`, ask what GLM should do.
 - Use `--resume-last` for an obvious follow-up. Use `--no-context` only when the
   user requests isolation.
 - Leave model, effort, budget, and timeout unset unless requested. The runtime
-  tries `glm-5.3` first and transparently falls back to `glm-5.2` only when
+  tries `glm-5.3` first and transparently falls back to `glm-4.7` only when
   Z.ai rate-limits the preferred model. The result always reports a fallback.
 
 ```bash

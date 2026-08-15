@@ -119,7 +119,7 @@ Supported variables:
 The key is resolved from `~/.glm.env`, process environment, then workspace
 `.env`. Provider variables are removed/rebuilt only for the child process.
 `glm-5.3` is preferred. After the transport reports three provider retries for
-a rate-limit failure, the companion makes one fresh attempt with `glm-5.2` (or
+a rate-limit failure, the companion makes one fresh attempt with `glm-4.7` (or
 `GLM_FALLBACK_MODEL`) and reports `fallbackFrom`, the primary error, and the
 actual model. Other failure classes do not silently switch models.
 

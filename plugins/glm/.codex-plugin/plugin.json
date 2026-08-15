@@ -1,6 +1,6 @@
 {
   "name": "glm",
-  "version": "1.0.1+codex.20260815060215",
+  "version": "1.0.2+codex.20260815061824",
   "description": "Use GLM 5.3 from Codex and Claude as a resumable coding and review companion.",
   "author": {
     "name": "Loic Baconnier",

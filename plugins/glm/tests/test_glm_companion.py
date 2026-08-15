@@ -127,14 +127,27 @@ class RuntimeContracts(unittest.TestCase):
         self.assertEqual(request.method, "GET")
         self.assertIsNone(request.data)
 
-    def test_rate_limited_glm_53_falls_back_to_glm_52(self) -> None:
+    def test_provider_probe_does_not_reject_a_lagging_model_catalog(self) -> None:
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = json.dumps({
+            "object": "list", "data": [{"id": "glm-4.7"}],
+        }).encode()
+        with (
+            mock.patch.object(glm_runtime, "resolve_key", return_value=("secret", "test")),
+            mock.patch.object(glm_runtime.urllib.request, "urlopen", return_value=response),
+        ):
+            result = glm_runtime.probe_provider("/tmp", "glm-5.3")
+        self.assertTrue(result["reachable"])
+        self.assertEqual(result["warning"]["type"], "model_not_listed")
+
+    def test_rate_limited_glm_53_falls_back_to_glm_47(self) -> None:
         failed = {"status": 1, "model": "glm-5.3", "providerRetryCount": 3, "errorMessage": "rate_limit"}
-        passed = {"status": 0, "model": "glm-5.2", "providerRetryCount": 0, "rawOutput": "ok"}
+        passed = {"status": 0, "model": "glm-4.7", "providerRetryCount": 0, "rawOutput": "ok"}
         with mock.patch.object(glm_runtime, "_run_glm_once", side_effect=[failed, passed]) as run_once:
             result = glm_runtime.run_glm({"cwd": "/tmp", "prompt": "test"})
         self.assertEqual(run_once.call_count, 2)
         self.assertEqual(run_once.call_args_list[0].args[0]["model"], "glm-5.3")
-        self.assertEqual(run_once.call_args_list[1].args[0]["model"], "glm-5.2")
+        self.assertEqual(run_once.call_args_list[1].args[0]["model"], "glm-4.7")
         self.assertEqual(result["fallbackFrom"], "glm-5.3")
         self.assertEqual(result["rawOutput"], "ok")
 

@@ -41,7 +41,7 @@ class GlmReviewAdapterTests(unittest.TestCase):
             output = root / "review.md"
             payload = {
                 "rawOutput": "Verdict global: PASS\n\nNo findings.",
-                "model": "glm-5.2",
+                "model": "glm-4.7",
                 "fallbackFrom": "glm-5.3",
             }
             result = adapter.run_review(self.arguments(root, output), self.fake_companion(root, payload))

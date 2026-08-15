@@ -20,7 +20,7 @@
     {
       "name": "glm",
       "description": "Delegate tasks, reviews, and conversation context from Claude Code to GLM through Z.AI.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "Loic Baconnier"
       },

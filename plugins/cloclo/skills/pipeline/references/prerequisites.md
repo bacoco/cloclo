@@ -53,7 +53,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/run_glm_companion.py" setup --host claude
 
 Credential resolution order is `~/.glm.env`, process `ZAI_API_KEY` or
 `GLM_API_KEY`, then the workspace `.env`. The runtime prefers `glm-5.3` and
-uses the configured `glm-5.2` fallback only for provider rate limits. A missing
+uses the configured `glm-4.7` fallback only for provider rate limits. A missing
 key or failure of both models does not block the pipeline; GLM review phases
 are skipped with a logged warning and Codex remains active.
 

@@ -100,7 +100,7 @@ Key lookup order is:
 3. the same keys in the workspace `.env`
 
 The runtime prefers `glm-5.3`. If Z.AI rate-limits that model, it retries once
-with `glm-5.2` and reports the fallback in the result. It never prints the key or
+with the independent `glm-4.7` model and reports the fallback in the result. It never prints the key or
 writes provider credentials into Claude settings.
 
 Run setup checks with `$glm setup` in Codex or `/glm:glm setup` in Claude Code.

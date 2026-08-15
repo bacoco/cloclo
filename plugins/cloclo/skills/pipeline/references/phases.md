@@ -45,7 +45,7 @@ slower model, not the sum).
 - Codex unavailable (CLI missing, usage limit) → its built-in Claude fallback runs. Never skipped silently.
 - GLM unavailable (no Z.ai key, or both `glm-5.3` and its configured
   fallback fail) → **skipped with warning**. A rate-limit on the preferred
-  model first triggers the runtime's explicit `glm-5.2` fallback. Codex still
+  model first triggers the runtime's explicit `glm-4.7` fallback. Codex still
   produces a review, so the phase still has ≥1 opinion.
 - Both unavailable → log warning, proceed to next phase without review. This is the only case where Phase 2 actually skips entirely.
 
