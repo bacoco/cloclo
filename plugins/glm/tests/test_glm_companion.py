@@ -70,13 +70,13 @@ class ContextContracts(unittest.TestCase):
 
 
 class RuntimeContracts(unittest.TestCase):
-    def test_command_pins_glm_52(self) -> None:
+    def test_command_pins_glm_53(self) -> None:
         with (
             mock.patch.object(glm_runtime, "find_claude", return_value="claude"),
             mock.patch.object(glm_runtime, "sandbox_command", side_effect=lambda command, request, write: command),
         ):
             command = glm_runtime.build_command({"cwd": "/tmp", "write": False})
-        self.assertEqual(command[command.index("--model") + 1], "glm-5.2")
+        self.assertEqual(command[command.index("--model") + 1], "glm-5.3")
 
     def test_write_mode_is_explicitly_forwarded_to_transport(self) -> None:
         with (
@@ -92,11 +92,11 @@ class RuntimeContracts(unittest.TestCase):
             mock.patch.object(glm_runtime, "_env_value", return_value=None),
             mock.patch.dict(os.environ, {"ZAI_API_KEY": "secret", "ANTHROPIC_API_KEY": "wrong"}, clear=True),
         ):
-            child = glm_runtime.provider_env("/tmp", "glm-5.2")
+            child = glm_runtime.provider_env("/tmp", "glm-5.3")
             self.assertNotIn("ANTHROPIC_API_KEY", child)
             self.assertEqual(child["ANTHROPIC_AUTH_TOKEN"], "secret")
             self.assertEqual(child["ANTHROPIC_DEFAULT_HAIKU_MODEL"], "glm-4.7")
-            self.assertEqual(child["ANTHROPIC_DEFAULT_SONNET_MODEL"], "glm-5.2")
+            self.assertEqual(child["ANTHROPIC_DEFAULT_SONNET_MODEL"], "glm-5.3")
             self.assertNotIn("CLAUDE_CODE_AUTO_COMPACT_WINDOW", child)
             self.assertEqual(child["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"], "1")
             self.assertEqual(child["API_TIMEOUT_MS"], "3000000")
@@ -114,32 +114,32 @@ class RuntimeContracts(unittest.TestCase):
     def test_provider_probe_lists_models_without_inference(self) -> None:
         response = mock.MagicMock()
         response.__enter__.return_value.read.return_value = json.dumps({
-            "object": "list", "data": [{"id": "glm-5.2"}],
+            "object": "list", "data": [{"id": "glm-5.3"}],
         }).encode()
         with (
             mock.patch.object(glm_runtime, "resolve_key", return_value=("secret", "test")),
             mock.patch.object(glm_runtime.urllib.request, "urlopen", return_value=response) as urlopen,
         ):
-            result = glm_runtime.probe_provider("/tmp", "glm-5.2[1m]")
+            result = glm_runtime.probe_provider("/tmp", "glm-5.3[1m]")
         self.assertTrue(result["reachable"])
         request = urlopen.call_args.args[0]
         self.assertEqual(request.full_url, glm_runtime.ZAI_MODELS_URL)
         self.assertEqual(request.method, "GET")
         self.assertIsNone(request.data)
 
-    def test_rate_limited_glm_52_falls_back_to_glm_47(self) -> None:
-        failed = {"status": 1, "model": "glm-5.2", "providerRetryCount": 3, "errorMessage": "rate_limit"}
-        passed = {"status": 0, "model": "glm-4.7", "providerRetryCount": 0, "rawOutput": "ok"}
+    def test_rate_limited_glm_53_falls_back_to_glm_52(self) -> None:
+        failed = {"status": 1, "model": "glm-5.3", "providerRetryCount": 3, "errorMessage": "rate_limit"}
+        passed = {"status": 0, "model": "glm-5.2", "providerRetryCount": 0, "rawOutput": "ok"}
         with mock.patch.object(glm_runtime, "_run_glm_once", side_effect=[failed, passed]) as run_once:
             result = glm_runtime.run_glm({"cwd": "/tmp", "prompt": "test"})
         self.assertEqual(run_once.call_count, 2)
-        self.assertEqual(run_once.call_args_list[0].args[0]["model"], "glm-5.2")
-        self.assertEqual(run_once.call_args_list[1].args[0]["model"], "glm-4.7")
-        self.assertEqual(result["fallbackFrom"], "glm-5.2")
+        self.assertEqual(run_once.call_args_list[0].args[0]["model"], "glm-5.3")
+        self.assertEqual(run_once.call_args_list[1].args[0]["model"], "glm-5.2")
+        self.assertEqual(result["fallbackFrom"], "glm-5.3")
         self.assertEqual(result["rawOutput"], "ok")
 
     def test_non_rate_provider_failure_does_not_change_models(self) -> None:
-        failed = {"status": 1, "model": "glm-5.2", "providerRetryCount": 3, "errorMessage": "network timeout"}
+        failed = {"status": 1, "model": "glm-5.3", "providerRetryCount": 3, "errorMessage": "network timeout"}
         with mock.patch.object(glm_runtime, "_run_glm_once", return_value=failed) as run_once:
             result = glm_runtime.run_glm({"cwd": "/tmp", "prompt": "test"})
         self.assertEqual(run_once.call_count, 1)
@@ -219,7 +219,7 @@ class RuntimeContracts(unittest.TestCase):
     def test_setup_text_exposes_provider_error_code(self) -> None:
         args = argparse.Namespace(host="codex", cwd="/tmp", enable_review_gate=False, disable_review_gate=False, no_probe=False, json=False)
         report = {
-            "ready": False, "provider": "Z.ai", "model": "glm-5.2", "keyConfigured": True,
+            "ready": False, "provider": "Z.ai", "model": "glm-5.3", "keyConfigured": True,
             "providerProbe": {"reachable": False, "error": {"type": "api_error", "code": "1313", "message": "limited"}},
         }
         with (

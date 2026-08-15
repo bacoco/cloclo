@@ -1,4 +1,4 @@
 interface:
   display_name: "GLM Companion"
-  short_description: "Déléguer du travail complet à GLM 5.2"
-  default_prompt: "Utilise $glm pour confier cette tâche à GLM 5.2."
+  short_description: "Déléguer du travail complet à GLM 5.3"
+  default_prompt: "Utilise $glm pour confier cette tâche à GLM 5.3."

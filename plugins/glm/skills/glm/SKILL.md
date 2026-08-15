@@ -1,6 +1,6 @@
 ---
 name: glm
-description: Use GLM 5.2 through the Z.ai Anthropic-compatible API as a complete companion from Codex or Claude Code. Trigger on `$glm` in Codex, `/glm` in Claude, requests to delegate to GLM, independent GLM implementation/debugging/research/planning/review, conversation transfer, or GLM setup/status/result/resume/cancel. Supports foreground/background jobs, visible host context, read-only/write modes, structured and adversarial reviews, resumable sessions, and optional stop-review gates.
+description: Use GLM 5.3 through the Z.ai Coding Plan Anthropic-compatible API as a complete companion from Codex or Claude Code. Trigger on `$glm` in Codex, `/glm` in Claude, requests to delegate to GLM, independent GLM implementation/debugging/research/planning/review, conversation transfer, or GLM setup/status/result/resume/cancel. Supports foreground/background jobs, visible host context, read-only/write modes, structured and adversarial reviews, resumable sessions, and optional stop-review gates.
 ---
 
 # GLM Companion
@@ -38,7 +38,7 @@ If the user writes only `$glm`, ask what GLM should do.
 - Use `--resume-last` for an obvious follow-up. Use `--no-context` only when the
   user requests isolation.
 - Leave model, effort, budget, and timeout unset unless requested. The runtime
-  tries `glm-5.2` first and transparently falls back to `glm-4.7` only when
+  tries `glm-5.3` first and transparently falls back to `glm-5.2` only when
   Z.ai rate-limits the preferred model. The result always reports a fallback.
 
 ```bash

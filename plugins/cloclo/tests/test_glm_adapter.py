@@ -41,13 +41,13 @@ class GlmReviewAdapterTests(unittest.TestCase):
             output = root / "review.md"
             payload = {
                 "rawOutput": "Verdict global: PASS\n\nNo findings.",
-                "model": "glm-4.7",
-                "fallbackFrom": "glm-5.2",
+                "model": "glm-5.2",
+                "fallbackFrom": "glm-5.3",
             }
             result = adapter.run_review(self.arguments(root, output), self.fake_companion(root, payload))
             self.assertEqual(result, 0)
             self.assertIn("Verdict global: PASS", output.read_text(encoding="utf-8"))
-            self.assertIn('"fallbackFrom": "glm-5.2"', Path(f"{output}.runtime.log").read_text(encoding="utf-8"))
+            self.assertIn('"fallbackFrom": "glm-5.3"', Path(f"{output}.runtime.log").read_text(encoding="utf-8"))
 
     def test_missing_verdict_fails_without_output(self):
         with tempfile.TemporaryDirectory() as temp:

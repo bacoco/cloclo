@@ -22,8 +22,8 @@ from glm_state import state_root, workspace_root
 
 ZAI_BASE_URL = "https://api.z.ai/api/anthropic"
 ZAI_MODELS_URL = "https://api.z.ai/api/coding/paas/v4/models"
-DEFAULT_MODEL = "glm-5.2"
-FALLBACK_MODEL = "glm-4.7"
+DEFAULT_MODEL = "glm-5.3"
+FALLBACK_MODEL = "glm-5.2"
 DEFAULT_HAIKU_MODEL = "glm-4.7"
 DEPTH_ENV = "GLM_COMPANION_DEPTH"
 READ_ONLY_TOOLS = "Read,Grep,Glob,Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(git show:*),Bash(rg:*),Bash(ls:*)"
